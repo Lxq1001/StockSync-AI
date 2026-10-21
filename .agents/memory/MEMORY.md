@@ -1,0 +1,1 @@
+- [GitHub connector availability](github-connector-availability.md) — verify a callable connection after attachment; an “attached” result alone may not expose GitHub API access.
