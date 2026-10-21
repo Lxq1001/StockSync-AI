@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "StockSync AI"
+description = "An interactive procurement and inventory demo for Malaysian retail and food businesses. Monitor stock risk, review forecast-based purchase suggestions, approve orders, and track every decision in an audit log."
+version = "1.0.0"
+id = "artifacts/stocksync-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18173
+
+[services.development]
+run = "pnpm --filter @workspace/stocksync-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/stocksync-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/stocksync-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18173"
+BASE_PATH = "/"
