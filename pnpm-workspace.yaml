@@ -68,12 +68,6 @@ catalog:
 
 autoInstallPeers: false
 
-onlyBuiltDependencies:
-  - '@swc/core'
-  - esbuild
-  - msw
-  - unrs-resolver
-
 overrides:
   # replit uses linux-x64 only, we can exclude all other platforms
   "esbuild>@esbuild/darwin-arm64": "-"
@@ -95,7 +89,7 @@ overrides:
   "esbuild>@esbuild/sunos-x64": "-"
   "esbuild>@esbuild/win32-arm64": "-"
   "esbuild>@esbuild/win32-ia32": "-"
-  "esbuild>@esbuild/win32-x64": "-"
+  #"esbuild>@esbuild/win32-x64": "-"
   "esbuild>@esbuild/aix-ppc64": '-'
   "esbuild>@esbuild/android-arm": '-'
   "esbuild>@esbuild/android-arm64": '-'
@@ -160,3 +154,6 @@ overrides:
   esbuild: "0.28.2"
   # orval pins js-yaml to an exact version older than the CVE fix (>=4.3.2)
   js-yaml: '4.3.2'
+
+allowBuilds:
+  esbuild: true
