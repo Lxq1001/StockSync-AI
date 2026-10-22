@@ -3,3 +3,4 @@
 - [Account data boundaries](account-data-boundaries.md) — do not assign the old anonymous demo workspace to the first account that signs in.
 - [UI scope boundaries](ui-scope-boundaries.md) — retain the original demo components and Activity Log; authentication and PDF generation are out of scope.
 - [Supplied datasets only](dataset-source-policy.md) — the user retired the original sample database; use supplied data only, never old samples as a reset or fallback.
+- [Local routing boundary](local-routing-boundary.md) — standalone VS Code runs need their own frontend/API router; a Vite page returning HTML is not dataset JSON.

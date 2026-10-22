@@ -11,6 +11,7 @@ import { TemplatePage } from '@/pages/template';
 import { ActivityPage } from '@/pages/activity';
 import { buildDraft, loadStore, saveStore, setDraft, type StoreData } from '@/lib/procurement';
 import { activateProvidedWorkspace, mergeSupplierContacts, providedWorkspace, type ProvidedDataset } from '@/lib/provided-dataset';
+import { readDatasetResponse } from '@/lib/dataset-request';
 
 const storage = (() => { try { return typeof window !== 'undefined' ? window.localStorage : undefined; } catch { return undefined; } })();
 
@@ -35,9 +36,7 @@ function Workspace() {
   useEffect(() => {
     let cancelled = false;
     setDatasetError('');
-    fetch('/api/stock-dataset').then(async response => {
-      if (!response.ok) throw new Error('Supplier contacts could not be loaded.');
-      const bundle = await response.json() as ProvidedDataset;
+    fetch('/api/stock-dataset').then(readDatasetResponse).then(bundle => {
       if (cancelled) return;
       const result = activateProvidedWorkspace(dataRef.current, bundle, storage);
       setDataset(bundle);

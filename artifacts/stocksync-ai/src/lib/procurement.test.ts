@@ -8,6 +8,7 @@ import {
 import { applyImport, parseCsv, parseSalesFile, previewImport, sampleCsv } from './sales-import';
 import { activateProvidedWorkspace, loadProvidedWorkspace, mergeSupplierContacts, providedWorkspace } from './provided-dataset';
 import type { ProvidedDataset } from './provided-dataset';
+import { readDatasetResponse } from './dataset-request';
 
 const fixture = (name: string) => JSON.parse(readFileSync(new URL(`../../../api-server/src/data/${name}`, import.meta.url), 'utf8'));
 const provided: ProvidedDataset = {
@@ -15,6 +16,17 @@ const provided: ProvidedDataset = {
   salesTransactions: fixture('sales_transaction.json'), importData: fixture('import_data.json'),
 };
 const initialData = () => providedWorkspace(provided);
+
+test('dataset response explains local HTML routing mistakes without a JSON parsing crash', async () => {
+  await assert.rejects(readDatasetResponse(new Response('<!DOCTYPE html>', {
+    headers: { 'content-type': 'text/html' },
+  })), /run pnpm dev from the repository root/);
+  await assert.rejects(readDatasetResponse(new Response('unavailable', { status: 502 })), /API server is running/);
+  const response = await readDatasetResponse(new Response(JSON.stringify(provided), {
+    headers: { 'content-type': 'application/json' },
+  }));
+  assert.equal(response.inventory.length, 15);
+});
 
 class MemStore { m = new Map<string, string>(); fail = false;
   getItem(k: string) { return this.m.get(k) ?? null; }
