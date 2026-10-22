@@ -40,6 +40,7 @@ export function finalizeApproval(
   quantity: number,
   note = '',
   timestamp = new Date().toISOString(),
+  actor = 'Aina Rahman',
 ): { data: StoreData; order: PurchaseOrder } {
   const order = data.orders.find(o => o.id === orderId);
   if (!order || order.status !== 'Awaiting approval') {
@@ -58,7 +59,7 @@ export function finalizeApproval(
   }
   const finalized: FinalizedPO = {
     documentId: `DOC-${crypto.randomUUID()}`, orderId, createdAt: order.createdAt,
-    approvedAt: timestamp, approvedBy: 'Aina Rahman', supplierName: supplier.name,
+    approvedAt: timestamp, approvedBy: actor, supplierName: supplier.name,
     itemName: sku.name, quantity, unit: sku.unit, unitCost: order.unitCost,
     totalCost, note: (note.trim() || order.approvalDetails || 'Approved by manager').slice(0, 800),
   };
@@ -67,7 +68,7 @@ export function finalizeApproval(
     id: `MOCK-${crypto.randomUUID()}`, channel,
     recipient: channel === 'email' ? `${supplier.id}@supplier.example` : `${supplier.name} (demo WhatsApp contact)`,
     subject: `Purchase order ${orderId} — ${formatMoney(totalCost)}`,
-    body: `Hello ${supplier.name},\n\nPlease find purchase order ${orderId} attached.\n${quantity} ${sku.unit} ${sku.name}\nTotal: ${formatMoney(totalCost)}\nApproved by: Aina Rahman\n\nPlease confirm availability and the delivery date.\n\nDEMO ONLY: this message was recorded locally, not sent.`,
+    body: `Hello ${supplier.name},\n\nPlease find purchase order ${orderId} attached.\n${quantity} ${sku.unit} ${sku.name}\nTotal: ${formatMoney(totalCost)}\nApproved by: ${actor}\n\nPlease confirm availability and the delivery date.\n\nDEMO ONLY: this message was recorded locally, not sent.`,
     attachment: `${orderId}-final.pdf`, acceptedAt: timestamp, status: 'Mock accepted',
   };
   const approved: PurchaseOrder = {
@@ -82,7 +83,7 @@ export function finalizeApproval(
   ];
   const entries: AuditEntry[] = stages.map(([action, details, reference], index) => ({
     id: crypto.randomUUID(), timestamp: new Date(Date.parse(timestamp) + index).toISOString(),
-    actor: index === 0 ? 'Aina Rahman' : 'StockSync AI · demo',
+    actor: index === 0 ? actor : 'StockSync AI · demo',
     action, details: `${orderId} · ${details}`, orderId, reference,
   }));
   return {
@@ -91,7 +92,7 @@ export function finalizeApproval(
   };
 }
 
-export function receivePurchaseOrder(data: StoreData, orderId: string): StoreData {
+export function receivePurchaseOrder(data: StoreData, orderId: string, actor = 'Aina Rahman'): StoreData {
   const order = data.orders.find(o => o.id === orderId);
   if (!order || order.status !== 'Pending Delivery') {
     throw new Error('Only a Pending Delivery order can be received. Stock was not added again.');
@@ -103,7 +104,7 @@ export function receivePurchaseOrder(data: StoreData, orderId: string): StoreDat
     orders: data.orders.map(o => o.id === orderId ? { ...o, status: 'Received' } : o),
     skus: data.skus.map(s => s.id === sku.id ? { ...s, onHand: s.onHand + order.quantity } : s),
     audit: [{
-      id: crypto.randomUUID(), timestamp: new Date().toISOString(), actor: 'Aina Rahman',
+      id: crypto.randomUUID(), timestamp: new Date().toISOString(), actor,
       action: 'Simulated delivery received', orderId,
       details: `${orderId} · ${sku.name} · +${order.quantity} ${sku.unit} added to local stock`,
     }, ...data.audit],

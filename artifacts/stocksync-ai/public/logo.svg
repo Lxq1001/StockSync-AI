@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="StockSync AI">
+  <rect width="64" height="64" rx="18" fill="#245a4e"/>
+  <path d="M16 19h32v7H16zM16 29h21v7H16zM16 39h13v7H16z" fill="#f4efe2"/>
+  <path d="m39 37 5 5 10-12" fill="none" stroke="#d6aa72" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+</svg>
