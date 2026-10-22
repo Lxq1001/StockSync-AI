@@ -1,0 +1,110 @@
+import type { SKU, StoreData } from './procurement';
+
+/**
+ * Local sales import. Supported formats ONLY:
+ *  - CSV with header row: itemId,date,quantity
+ *  - JSON array of { "itemId": string, "date": "YYYY-MM-DD", "quantity": number }
+ * Not a database connector. All rows must be valid or nothing is applied.
+ */
+export const IMPORT_MAX_BYTES = 512 * 1024;
+export const IMPORT_MAX_ROWS = 5000;
+export const DEMAND_WINDOW_DAYS = 7;
+export type SalesRow = { itemId: string; date: string; quantity: number };
+export type ImportResult = { ok: true; rows: SalesRow[] } | { ok: false; errors: string[] };
+
+/** Minimal RFC 4180 style CSV parser: quoted fields, escaped quotes, CRLF. */
+export function parseCsv(text: string): string[][] {
+  const rows: string[][] = []; let row: string[] = []; let field = ''; let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else quoted = false; }
+      else field += c;
+    } else if (c === '"' && field === '') quoted = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(field); rows.push(row); row = []; field = ''; }
+    else field += c;
+  }
+  if (quoted) throw new Error('A quoted field is not closed.');
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => !(r.length === 1 && r[0].trim() === ''));
+}
+
+const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+export function validDate(s: string) {
+  const m = DATE.exec(s); if (!m) return false;
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3];
+}
+
+export function parseSalesFile(name: string, text: string, skus: SKU[]): ImportResult {
+  if (new Blob([text]).size > IMPORT_MAX_BYTES) return { ok: false, errors: [`File is larger than ${IMPORT_MAX_BYTES / 1024} KB.`] };
+  const lower = name.toLowerCase();
+  if (lower.startsWith('.env') || lower.includes('.env')) return { ok: false, errors: ['Environment files are not accepted.'] };
+  let raw: { line: number; itemId: unknown; date: unknown; quantity: unknown }[] = [];
+  try {
+    if (lower.endsWith('.json')) {
+      const data = JSON.parse(text);
+      if (!Array.isArray(data)) return { ok: false, errors: ['JSON must be an array of { itemId, date, quantity } objects.'] };
+      raw = data.map((r, i) => ({ line: i + 1, itemId: r?.itemId, date: r?.date, quantity: r?.quantity }));
+    } else if (lower.endsWith('.csv')) {
+      const rows = parseCsv(text.replace(/^\uFEFF/, ''));
+      if (!rows.length) return { ok: false, errors: ['The file is empty.'] };
+      const header = rows[0].map(h => h.trim());
+      const idx = { itemId: header.indexOf('itemId'), date: header.indexOf('date'), quantity: header.indexOf('quantity') };
+      if (idx.itemId < 0 || idx.date < 0 || idx.quantity < 0) return { ok: false, errors: ['CSV header must include itemId,date,quantity.'] };
+      raw = rows.slice(1).map((r, i) => ({ line: i + 2, itemId: r[idx.itemId]?.trim(), date: r[idx.date]?.trim(), quantity: r[idx.quantity]?.trim() === '' || r[idx.quantity] === undefined ? NaN : Number(r[idx.quantity]) }));
+    } else return { ok: false, errors: ['Choose a .csv or .json file.'] };
+  } catch (e) {
+    return { ok: false, errors: [`Could not read the file: ${e instanceof Error ? e.message : 'parse error'}`] };
+  }
+  if (!raw.length) return { ok: false, errors: ['No sales rows found.'] };
+  if (raw.length > IMPORT_MAX_ROWS) return { ok: false, errors: [`Too many rows (max ${IMPORT_MAX_ROWS}).`] };
+  const known = new Set(skus.map(s => s.id)); const errors: string[] = []; const rows: SalesRow[] = [];
+  for (const r of raw) {
+    const where = lower.endsWith('.json') ? `Entry ${r.line}` : `Line ${r.line}`;
+    if (typeof r.itemId !== 'string' || !known.has(r.itemId)) { errors.push(`${where}: unknown itemId "${String(r.itemId ?? '')}".`); continue; }
+    if (typeof r.date !== 'string' || !validDate(r.date)) { errors.push(`${where}: date must be a real YYYY-MM-DD date.`); continue; }
+    if (typeof r.quantity !== 'number' || !Number.isFinite(r.quantity) || r.quantity < 0) { errors.push(`${where}: quantity must be a number of 0 or more.`); continue; }
+    rows.push({ itemId: r.itemId, date: r.date, quantity: r.quantity });
+  }
+  if (errors.length) return { ok: false, errors: errors.slice(0, 8).concat(errors.length > 8 ? [`...and ${errors.length - 8} more problems.`] : []) };
+  return { ok: true, rows };
+}
+
+const shift = (date: string, days: number) => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
+
+export type ImportPreview = { windowStart: string; windowEnd: string; items: { id: string; name: string; before: number; after: number; recentSales: number[] }[]; rows: number; outside: number };
+/**
+ * The 7-day window ends on the latest date in the file. Each item that appears in the file gets
+ * recentSales = daily totals over those 7 days (missing days = 0) and avgDailyDemand = total / 7.
+ * Items absent from the file are unchanged. Stock on hand is never decremented.
+ */
+export function previewImport(data: StoreData, rows: SalesRow[]): ImportPreview {
+  const windowEnd = rows.reduce((m, r) => r.date > m ? r.date : m, rows[0].date);
+  const windowStart = shift(windowEnd, -(DEMAND_WINDOW_DAYS - 1));
+  const days = Array.from({ length: DEMAND_WINDOW_DAYS }, (_, i) => shift(windowStart, i));
+  const ids = Array.from(new Set(rows.map(r => r.itemId)));
+  let outside = 0;
+  const totals = new Map<string, number[]>(ids.map(id => [id, days.map(() => 0)]));
+  for (const r of rows) { const i = days.indexOf(r.date); if (i < 0) { outside++; continue; } totals.get(r.itemId)![i] += r.quantity; }
+  const items = ids.map(id => {
+    const sku = data.skus.find(s => s.id === id)!; const recentSales = totals.get(id)!.map(n => Math.round(n * 100) / 100);
+    return { id, name: sku.name, before: sku.avgDailyDemand, after: Math.round(recentSales.reduce((a, b) => a + b, 0) / DEMAND_WINDOW_DAYS * 100) / 100, recentSales };
+  });
+  return { windowStart, windowEnd, items, rows: rows.length, outside };
+}
+export function applyImport(data: StoreData, preview: ImportPreview, actor: string): StoreData {
+  const byId = new Map(preview.items.map(i => [i.id, i]));
+  return {
+    ...data,
+    skus: data.skus.map(s => { const p = byId.get(s.id); return p ? { ...s, avgDailyDemand: p.after, recentSales: p.recentSales } : s; }),
+    lastImport: { importedAt: new Date().toISOString(), rows: preview.rows, windowStart: preview.windowStart, windowEnd: preview.windowEnd },
+    audit: [{ id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()), timestamp: new Date().toISOString(), actor, action: 'Imported sales', details: `${preview.rows} rows · ${preview.items.length} items · demand window ${preview.windowStart} to ${preview.windowEnd} · stock on hand unchanged` }, ...data.audit],
+  };
+}
+export function sampleCsv(skus: SKU[], end = new Date().toISOString().slice(0, 10)): string {
+  const lines = ['itemId,date,quantity'];
+  for (const s of skus.slice(0, 3)) for (let d = 6; d >= 0; d--) lines.push(`${s.id},${shift(end, -d)},${Math.max(0, Math.round(s.avgDailyDemand + ((d % 3) - 1)))}`);
+  return lines.join('\n') + '\n';
+}

@@ -51,3 +51,6 @@ Thumbs.db
 
 # RunPod
 .env
+.env.*
+!.env.example
+attached_assets/*.env

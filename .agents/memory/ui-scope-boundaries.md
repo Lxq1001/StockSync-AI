@@ -1,0 +1,10 @@
+---
+name: UI scope boundaries
+description: User-directed baseline and exclusions for StockSync's inventory-to-email demo.
+---
+
+Keep the original repository's demo components and theme as the baseline. The user explicitly removed the subsequently added authentication and PDF generator and requested that the original Activity Log page remain completely unchanged.
+
+**Why:** The requested product demonstration is inventory suggestions and edits, an email-template workflow, and purchase-order tracking—not the added login/PDF workflow.
+
+**How to apply:** Do not reintroduce authentication, PDF downloads, or redesign the Activity Log without an explicit request. Local simulated sends must remain clearly labeled. Unused account-specific browser data must not be surfaced in the anonymous workspace.

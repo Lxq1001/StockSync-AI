@@ -1,74 +1,130 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { finalizeApproval, receivePurchaseOrder, type StoreData } from './procurement';
-import { createPurchaseOrderPdf } from './purchase-order-pdf';
+import {
+  buildDraft, editItem, initialData, LEGACY_KEY, loadStore, migrateV1, rejectSuggestion, saveStore, sendDraft,
+  setDraft, setOrderStatus, STORE_KEY, suggestions, validateItemEdit, type StoreData,
+} from './procurement';
+import { applyImport, parseCsv, parseSalesFile, previewImport, sampleCsv } from './sales-import';
 
-function fixture(): StoreData {
-  return {
-    budgetCap: 500, dispatchChannel: 'whatsapp', audit: [],
-    skus: [{ id: 'milk', name: 'Fresh milk', category: 'Chilled', onHand: 9, unit: 'L', avgDailyDemand: 8.4, leadTimeDays: 1, reorderBuffer: 1, supplierId: 'supplier', unitCost: 7.2, recentSales: [8, 9], batchSize: 30 }],
-    suppliers: [{ id: 'supplier', name: 'Demo supplier', contactMethod: 'Phone', MOQ: 6, leadTimeDays: 1 }],
-    orders: [{ id: 'PO-TEST', itemId: 'milk', supplierId: 'supplier', quantity: 18, unitCost: 7.2, totalCost: 129.6, status: 'Awaiting approval', createdAt: '2026-10-22T05:00:00Z', depletionDays: 1.1 }],
-  };
-}
+class MemStore { m = new Map<string, string>(); fail = false;
+  getItem(k: string) { return this.m.get(k) ?? null; }
+  setItem(k: string, v: string) { if (this.fail) throw new Error('QuotaExceededError'); this.m.set(k, v); } }
+const roundTrip = (s: MemStore, d: StoreData) => { saveStore(s, d); return loadStore(s).data; };
 
-test('approval finalizes a fixed snapshot, mock attachment and four linked audit events without adding stock', () => {
-  const original = fixture();
-  const result = finalizeApproval(original, 'PO-TEST', 20, 'Weekend stock', '2026-10-22T05:30:00Z');
-  assert.equal(result.order.status, 'Pending Delivery');
-  assert.equal(result.order.totalCost, 144);
-  assert.equal(result.order.finalized?.quantity, 20);
-  assert.equal(result.order.finalized?.note, 'Weekend stock');
-  assert.equal(result.order.dispatch?.channel, 'whatsapp');
-  assert.equal(result.order.dispatch?.attachment, 'PO-TEST-final.pdf');
-  assert.equal(result.data.audit.length, 4);
-  assert.ok(result.data.audit.every(a => a.orderId === 'PO-TEST' && a.reference));
-  assert.equal(result.data.skus[0].onHand, 9);
-  assert.equal(original.orders[0].status, 'Awaiting approval');
-  assert.throws(() => finalizeApproval(result.data, 'PO-TEST', 20), /already/);
-  const reloaded = JSON.parse(JSON.stringify(result.data)) as StoreData;
-  assert.deepEqual(reloaded.orders[0].finalized, result.order.finalized);
-});
-
-test('email is explicitly mocked and uses reserved example destination', () => {
-  const data = fixture();
-  data.dispatchChannel = 'email';
-  const { order } = finalizeApproval(data, 'PO-TEST', 18);
-  assert.equal(order.dispatch?.channel, 'email');
-  assert.match(order.dispatch!.recipient, /\.example$/);
-  assert.match(order.dispatch!.body, /not sent/);
-});
-
-test('budget and invalid quantity block approval without partial state', () => {
-  const data = fixture();
-  data.budgetCap = 100;
-  assert.throws(() => finalizeApproval(data, 'PO-TEST', 18), /budget cap/);
-  for (const qty of [0, -1, 1.5, NaN, Infinity, 61]) {
-    assert.throws(() => finalizeApproval(data, 'PO-TEST', qty), /whole quantity/);
+test('suggestions include only items with cover <= 7 days', () => {
+  const d = initialData();
+  const ids = suggestions(d).map(s => s.sku.id);
+  for (const sku of d.skus) {
+    const cover = sku.onHand / sku.avgDailyDemand;
+    assert.equal(ids.includes(sku.id), cover <= 7, sku.name);
   }
-  assert.equal(data.orders[0].status, 'Awaiting approval');
-  assert.equal(data.audit.length, 0);
+  const t = suggestions(d)[0];
+  assert.equal(t.totalCost, Math.round(t.quantity * t.sku.unitCost * 100) / 100);
+  assert.equal(t.quantity % t.sku.batchSize, 0);
 });
 
-test('generated file is a genuine PDF with order totals and simulation disclosure', async () => {
-  const { order } = finalizeApproval(fixture(), 'PO-TEST', 20, 'Weekend stock');
-  const pdf = createPurchaseOrderPdf(order.finalized!);
-  assert.equal(pdf.type, 'application/pdf');
-  const text = new TextDecoder().decode(await pdf.arrayBuffer());
-  assert.match(text, /^%PDF-/);
-  assert.match(text, /PO-TEST/);
-  assert.match(text, /RM 144.00/);
-  assert.match(text, /Supplier dispatch is mocked/);
-  assert.match(text, /%%EOF/);
+test('rejecting a suggestion persists across reload', () => {
+  const s = new MemStore();
+  const id = suggestions(initialData())[0].sku.id;
+  const loaded = roundTrip(s, rejectSuggestion(initialData(), id));
+  assert.ok(!suggestions(loaded).some(x => x.sku.id === id));
+  assert.throws(() => rejectSuggestion(initialData(), 'nope'));
 });
 
-test('receipt adds finalized quantity once and never changes the finalized PO', () => {
-  const approved = finalizeApproval(fixture(), 'PO-TEST', 20);
-  const received = receivePurchaseOrder(approved.data, 'PO-TEST');
-  assert.equal(received.skus[0].onHand, 29);
-  assert.equal(received.orders[0].status, 'Received');
-  assert.deepEqual(received.orders[0].finalized, approved.order.finalized);
-  assert.equal(received.audit.length, 5);
-  assert.throws(() => receivePurchaseOrder(received, 'PO-TEST'), /not added again/);
-  assert.equal(received.skus[0].onHand, 29);
+test('item edit validates blank, negative and non-finite and persists', () => {
+  assert.ok('error' in validateItemEdit({ name: ' ', onHand: '1', unitCost: '1' }));
+  assert.ok('error' in validateItemEdit({ name: 'x', onHand: '', unitCost: '1' }));
+  assert.ok('error' in validateItemEdit({ name: 'x', onHand: '-1', unitCost: '1' }));
+  assert.ok('error' in validateItemEdit({ name: 'x', onHand: '1', unitCost: 'Infinity' }));
+  assert.ok('error' in validateItemEdit({ name: 'x', onHand: 'abc', unitCost: '1' }));
+  const s = new MemStore();
+  const loaded = roundTrip(s, editItem(initialData(), 'sku-002', { name: ' Susu segar ', onHand: '40', unitCost: '6.5' }));
+  const sku = loaded.skus.find(x => x.id === 'sku-002')!;
+  assert.deepEqual([sku.name, sku.onHand, sku.unitCost], ['Susu segar', 40, 6.5]);
+});
+
+test('draft persists, send creates exactly one Sent order and blocks duplicates', () => {
+  const s = new MemStore();
+  const withDraft = roundTrip(s, setDraft(initialData(), buildDraft(initialData(), 'sku-002', 30)));
+  assert.equal(withDraft.draft?.quantity, 30);
+  assert.match(withDraft.draft!.body, /Fresh milk/);
+  assert.throws(() => sendDraft(withDraft, { ...withDraft.draft!, to: 'not-an-email' }), /recipient/);
+  const r = sendDraft(withDraft, withDraft.draft!);
+  assert.equal(r.order.status, 'Sent');
+  assert.equal(r.order.totalCost, 216);
+  assert.equal(r.data.orders.length, withDraft.orders.length + 1);
+  assert.equal(r.data.draft, undefined);
+  assert.match(r.data.audit[0].details, /no real email/);
+  assert.throws(() => sendDraft(r.data, withDraft.draft!), /already sent/);
+});
+
+test('status change is tracking only, persists, and never changes stock', () => {
+  const s = new MemStore();
+  const d = initialData();
+  const stock = d.skus.map(x => x.onHand);
+  let n = setOrderStatus(d, 'PO-2406', 'Received');
+  n = setOrderStatus(n, 'PO-2406', 'Pending Delivery');
+  n = setOrderStatus(n, 'PO-2406', 'Received');
+  const loaded = roundTrip(s, n);
+  assert.equal(loaded.orders.find(o => o.id === 'PO-2406')!.status, 'Received');
+  assert.deepEqual(loaded.skus.map(x => x.onHand), stock);
+  assert.throws(() => setOrderStatus(d, 'PO-2406', 'Awaiting approval' as never));
+});
+
+test('v1 anonymous migration keeps tracked orders and sets legacy aside; account keys ignored', () => {
+  const s = new MemStore();
+  s.setItem(`${LEGACY_KEY}:user_123`, JSON.stringify({ secret: true }));
+  const v1 = { ...initialData(), version: undefined, orders: [
+    { id: 'A', itemId: 'sku-001', supplierId: 'sup-01', quantity: 1, unitCost: 1, totalCost: 1, status: 'Awaiting approval', createdAt: 'x', depletionDays: 1 },
+    { id: 'B', itemId: 'sku-001', supplierId: 'sup-01', quantity: 1, unitCost: 1, totalCost: 1, status: 'Received', createdAt: 'x', depletionDays: 1 },
+    { id: 'C', itemId: 'sku-001', supplierId: 'sup-01', quantity: 1, unitCost: 1, totalCost: 1, status: 'Rejected', createdAt: 'x', depletionDays: 1 },
+  ] };
+  s.setItem(LEGACY_KEY, JSON.stringify(v1));
+  const { data } = loadStore(s);
+  assert.deepEqual(data.orders.map(o => o.id), ['B']);
+  assert.deepEqual(data.legacyOrders.map(o => o.status), ['Awaiting approval', 'Rejected']);
+  assert.ok(s.getItem(STORE_KEY));
+  assert.equal(s.getItem(LEGACY_KEY), JSON.stringify(v1));
+  assert.equal(migrateV1({ skus: 'bad' }), null);
+  const onlyAccount = new MemStore();
+  onlyAccount.setItem(`${LEGACY_KEY}:user_123`, JSON.stringify({ ...initialData(), skus: [] }));
+  assert.equal(loadStore(onlyAccount).data.skus.length, initialData().skus.length);
+});
+
+test('storage errors are explicit', () => {
+  const s = new MemStore(); s.fail = true;
+  assert.throws(() => saveStore(s, initialData()), /Could not save/);
+  assert.match(loadStore(undefined).message!, /unavailable/);
+  const bad = new MemStore(); bad.setItem(STORE_KEY, '{oops');
+  assert.match(loadStore(bad).message!, /Could not read/);
+});
+
+test('CSV parser handles quotes, escaped quotes and CRLF', () => {
+  assert.deepEqual(parseCsv('a,b\r\n"x,1","say ""hi"""\n'), [['a', 'b'], ['x,1', 'say "hi"']]);
+  assert.throws(() => parseCsv('"open'));
+});
+
+test('import validates atomically and recomputes a 7-day window without touching stock', () => {
+  const d = initialData();
+  const bad = parseSalesFile('s.csv', 'itemId,date,quantity\nsku-001,2025-04-18,3\nsku-999,2025-04-18,1\nsku-001,2025-02-30,1\nsku-001,2025-04-18,-2\n', d.skus);
+  assert.equal(bad.ok, false);
+  if (!bad.ok) assert.equal(bad.errors.length, 3);
+  assert.equal(parseSalesFile('s.csv', 'item,date\n', d.skus).ok, false);
+  assert.equal(parseSalesFile('.env', 'X=1', d.skus).ok, false);
+  assert.equal(parseSalesFile('s.sql', 'select 1', d.skus).ok, false);
+  const good = parseSalesFile('s.csv', '"itemId","date","quantity"\nsku-002,2025-04-18,14\nsku-002,2025-04-12,7\nsku-002,2025-04-01,99\n', d.skus);
+  assert.ok(good.ok);
+  if (!good.ok) return;
+  const p = previewImport(d, good.rows);
+  assert.equal(p.windowStart, '2025-04-12');
+  assert.equal(p.outside, 1);
+  assert.equal(p.items[0].after, 3);
+  const next = applyImport(d, p, 'Aina Rahman');
+  const milk = next.skus.find(s => s.id === 'sku-002')!;
+  assert.equal(milk.avgDailyDemand, 3);
+  assert.equal(milk.onHand, 9);
+  assert.equal(next.skus.find(s => s.id === 'sku-001')!.avgDailyDemand, 5.2);
+  const json = parseSalesFile('s.json', JSON.stringify([{ itemId: 'sku-001', date: '2025-04-18', quantity: 'x' }]), d.skus);
+  assert.equal(json.ok, false);
+  assert.ok(parseSalesFile('sample.csv', sampleCsv(d.skus, '2025-04-18'), d.skus).ok);
 });
