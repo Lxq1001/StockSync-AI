@@ -8,7 +8,7 @@ export type Supplier = { id: string; name: string; contactMethod: string; MOQ: n
 /** Tracked purchase-order statuses. Status changes are tracking only and never change stock. */
 export const ORDER_STATUSES = ['Sent', 'Pending Delivery', 'Received'] as const;
 export type OrderStatus = typeof ORDER_STATUSES[number];
-export type SimulatedSend = { to: string; from: string; subject: string; body: string; recordedAt: string; note: 'Demo only - no real email sent' };
+export type SimulatedSend = { to: string; from: string; subject: string; body: string; recordedAt: string; note: 'Demo only - no real email sent' | 'Sent from external mail app; confirmed by user' };
 export type PurchaseOrder = {
   id: string; itemId: string; supplierId: string; quantity: number; unitCost: number;
   totalCost: number; status: OrderStatus; createdAt: string; depletionDays: number;
@@ -155,7 +155,11 @@ export function validateDraft(d: Pick<TemplateDraft, 'to' | 'from' | 'subject' |
   if (d.body.length > 5000) return 'Content must be 5,000 characters or fewer.';
   return null;
 }
-/** Records a simulated send and creates one Sent purchase order. Throws if there is no draft (prevents duplicates). */
+/** Builds a prefilled email-app handoff; the app cannot verify whether the user sends it. */
+export function buildMailtoUrl(draft: Pick<TemplateDraft, 'to' | 'subject' | 'body'>): string {
+  return `mailto:${draft.to.trim()}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`;
+}
+/** Records a user-confirmed external send and creates one Sent purchase order. Throws if there is no draft (prevents duplicates). */
 export function sendDraft(data: StoreData, edited: Pick<TemplateDraft, 'to' | 'from' | 'subject' | 'body'>, now = new Date().toISOString()): { data: StoreData; order: PurchaseOrder } {
   const draft = data.draft;
   if (!draft) throw new Error('This draft was already sent or cleared. No new order was created.');
@@ -169,14 +173,14 @@ export function sendDraft(data: StoreData, edited: Pick<TemplateDraft, 'to' | 'f
     id, itemId: draft.itemId, supplierId: draft.supplierId, quantity: draft.quantity, unitCost: draft.unitCost,
     totalCost: round2(draft.quantity * draft.unitCost), status: 'Sent', createdAt: now,
     depletionDays: Number.isFinite(estimatedCover(sku)) ? round2(estimatedCover(sku)) : 0, approvedBy: MANAGER,
-    send: { to: edited.to.trim(), from: edited.from.trim(), subject: edited.subject.trim(), body: edited.body, recordedAt: now, note: 'Demo only - no real email sent' },
+    send: { to: edited.to.trim(), from: 'Not captured (external mail app)', subject: edited.subject.trim(), body: edited.body, recordedAt: now, note: 'Sent from external mail app; confirmed by user' },
   };
   return {
     order,
     data: {
       ...data, draft: undefined, orders: [order, ...data.orders],
       rejectedSuggestions: data.rejectedSuggestions,
-      audit: [log('Simulated email send', `${id} · ${draft.quantity} ${sku.unit} ${sku.name} · ${formatMoney(order.totalCost)} · to ${order.send!.to} · demo only, no real email sent · status Sent`, id), ...data.audit],
+      audit: [log('Email marked as sent', `${id} · ${draft.quantity} ${sku.unit} ${sku.name} · ${formatMoney(order.totalCost)} · to ${order.send!.to} · user confirmed sent from external mail app · status Sent`, id), ...data.audit],
     },
   };
 }

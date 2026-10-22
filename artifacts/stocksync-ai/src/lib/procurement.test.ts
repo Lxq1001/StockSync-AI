@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  buildDraft, editItem, initialData, LEGACY_KEY, loadStore, migrateV1, rejectSuggestion, saveStore, sendDraft,
+  buildDraft, buildMailtoUrl, editItem, initialData, LEGACY_KEY, loadStore, migrateV1, rejectSuggestion, saveStore, sendDraft,
   setDraft, setOrderStatus, STORE_KEY, suggestions, validateItemEdit, type StoreData,
 } from './procurement';
 import { applyImport, parseCsv, parseSalesFile, previewImport, sampleCsv } from './sales-import';
@@ -52,6 +52,12 @@ test('email closing uses Thank you for new and previously saved drafts', () => {
   assert.equal(loaded.draft?.body, draft.body);
 });
 
+test('mailto link carries the editable recipient, subject, and complete encoded body', () => {
+  const draft = buildDraft(initialData(), 'sku-002', 30);
+  const url = buildMailtoUrl({ ...draft, to: 'buyer@example.com', subject: 'Order & delivery', body: 'Hello team,\nPlease confirm.' });
+  assert.equal(url, 'mailto:buyer@example.com?subject=Order%20%26%20delivery&body=Hello%20team%2C%0APlease%20confirm.');
+});
+
 test('draft persists, send creates exactly one Sent order and blocks duplicates', () => {
   const s = new MemStore();
   const withDraft = roundTrip(s, setDraft(initialData(), buildDraft(initialData(), 'sku-002', 30)));
@@ -63,7 +69,8 @@ test('draft persists, send creates exactly one Sent order and blocks duplicates'
   assert.equal(r.order.totalCost, 216);
   assert.equal(r.data.orders.length, withDraft.orders.length + 1);
   assert.equal(r.data.draft, undefined);
-  assert.match(r.data.audit[0].details, /no real email/);
+  assert.match(r.data.audit[0].details, /user confirmed sent from external mail app/);
+  assert.equal(r.order.send?.note, 'Sent from external mail app; confirmed by user');
   assert.throws(() => sendDraft(r.data, withDraft.draft!), /already sent/);
 });
 

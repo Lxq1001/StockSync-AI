@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Boxes, Pencil, Send, Trash2 } from 'lucide-react';
 import { Empty, FormError, PageTitle, type PageProps } from '@/components/common';
-import { sendDraft, setDraft, validateDraft, type TemplateDraft } from '@/lib/procurement';
+import { buildMailtoUrl, sendDraft, setDraft, validateDraft, type TemplateDraft } from '@/lib/procurement';
 
 type Field = 'to' | 'from' | 'subject' | 'body';
 
@@ -22,14 +22,20 @@ export function TemplatePage({ data, update, toast }: PageProps) {
   </main>;
 
   const setField = (f: Field, v: string) => { setError(''); update(d => d.draft ? setDraft(d, { ...d.draft, [f]: v } as TemplateDraft) : d); };
-  const send = () => {
+  const openEmailApp = () => {
+    const problem = validateDraft(draft);
+    if (problem) { setError(problem); setEditing(true); return; }
+    window.location.href = buildMailtoUrl(draft);
+  };
+  const markSent = () => {
     if (sendingRef.current) return;
     const problem = validateDraft(draft);
     if (problem) { setError(problem); setEditing(true); return; }
+    if (!window.confirm('Confirm you sent this email in your mail app? This creates a Sent purchase order in this browser. The app cannot verify delivery.')) return;
     sendingRef.current = true; setSending(true);
     let id = '';
     const ok = update(d => { const r = sendDraft(d, d.draft ?? draft); id = r.order.id; return r.data; });
-    if (ok) { toast(`${id} recorded as Sent. Demo only: no real email was sent.`); navigate('/purchase-orders'); }
+    if (ok) { toast(`${id} recorded as Sent based on your confirmation.`); navigate('/purchase-orders'); }
     else { sendingRef.current = false; setSending(false); }
   };
   const discard = () => { if (window.confirm('Discard this unsent draft?') && update(d => setDraft(d, undefined))) toast('Draft discarded.'); };
@@ -40,11 +46,12 @@ export function TemplatePage({ data, update, toast }: PageProps) {
     <PageTitle title="Order email" />
     <section className="mail-window" data-testid="panel-mail">
       <div className="mail-bar"><span className="mail-title">New message</span><span className="pill">{editing ? 'Editing' : 'Read-only'}</span></div>
-      {row('to', 'To')}{row('from', 'From')}{row('subject', 'Subject')}
+      {row('to', 'To')}{row('subject', 'Subject')}
       <textarea className="mail-body" value={draft.body} readOnly={ro} onChange={e => setField('body', e.target.value)} aria-label="Content" rows={16} data-testid="input-mail-body" />
       <FormError message={error} />
       <div className="mail-actions">
-        <button className="button primary" onClick={send} disabled={sending} data-testid="button-send-email"><Send /> {sending ? 'Recording...' : 'Send'}</button>
+        <button className="button primary" onClick={openEmailApp} disabled={sending} data-testid="button-send-email"><Send /> Open email app</button>
+        <button className="button" onClick={markSent} disabled={sending} data-testid="button-mark-sent">{sending ? 'Recording...' : 'I sent it — create order'}</button>
         <button className="button" onClick={() => setEditing(e => !e)} aria-pressed={editing} disabled={sending} data-testid="button-edit-email"><Pencil /> {editing ? 'Done editing' : 'Edit'}</button>
         <button className="button small danger push" onClick={discard} disabled={sending} data-testid="button-discard-draft"><Trash2 /> Discard</button>
       </div>
