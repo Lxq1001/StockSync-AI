@@ -18,7 +18,7 @@ export function TemplatePage({ data, update, toast }: PageProps) {
   useEffect(() => { setWorking(draft); setEditing(false); }, [draft]);
 
   if (!draft) return <main className="content">
-    <PageTitle eyebrow="Supplier email" title="Order email" subtitle="Drafts appear here when you approve a suggestion or confirm an order." />
+    <PageTitle title="Order email" />
     <div className="panel"><Empty title="No draft to send" detail="Go to Inventory, then choose Approve on a suggested task or Order on any item to generate an email.">
       <Link href="/inventory" className="button primary" data-testid="link-template-inventory"><Boxes /> Open Inventory</Link>
     </Empty></div>
@@ -57,7 +57,6 @@ export function TemplatePage({ data, update, toast }: PageProps) {
       <label className="mail-row"><span>From</span><input value="Choose your sending account in Gmail" readOnly aria-label="Sender" data-testid="input-mail-from" /></label>
       {row('to', 'To')}{row('subject', 'Subject')}
       <textarea className="mail-body" value={displayed.body} readOnly={!editing} disabled={sending} onChange={e => setField('body', e.target.value)} aria-label="Content" rows={16} data-testid="input-mail-body" />
-      <p className="item-detail" style={{ padding: '0 18px' }}>Open Gmail to sign in if needed, review the filled template, and click Send there. To use your shared mailbox, select that account in Gmail. If sign-in opens your inbox instead, return here and click Open Gmail again.</p>
       <FormError message={error} />
       <div className="mail-actions">
         <a className="button primary" href={buildGmailComposeUrl(draft)} target="_blank" rel="noopener noreferrer"
@@ -72,7 +71,7 @@ export function TemplatePage({ data, update, toast }: PageProps) {
         <button className="button small danger push" onClick={discard} disabled={sending} data-testid="button-discard-draft"><Trash2 /> Discard</button>
       </div>
     </section>
-    {handoff && <Modal title="Finish sending in Gmail" copy="Opening Gmail does not send the email." testId="modal-gmail-confirmation" onClose={() => { if (!sending) setHandoff(null); }}
+    {handoff && <Modal title="Finish sending in Gmail" testId="modal-gmail-confirmation" onClose={() => { if (!sending) setHandoff(null); }}
       footer={<><button className="button" disabled={sending} onClick={() => setHandoff(null)}>Not sent yet</button>
         <button className="button primary" disabled={sending} onClick={recordSent} data-testid="button-confirm-gmail-sent">{sending ? 'Recording...' : 'I sent it — record order'}</button></>}>
       <p>In the Gmail tab, choose the correct sending account, review the recipient and template, then click Gmail’s Send button.</p>

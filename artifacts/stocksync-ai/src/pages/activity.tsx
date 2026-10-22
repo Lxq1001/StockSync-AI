@@ -134,7 +134,7 @@ function exportActivityPdf() {
     const date = new Date().toISOString().slice(0, 10);
     pdf.save(`StockSync-Activity-Log-${date}.pdf`);
   }
-return <main className="content"><PageTitle title="Activity log" right={<span className="pill delivery">Local audit trail</span>}/>
+return <main className="content"><PageTitle title="Activity log"/>
  <div className="toolbar"><label className="searchbox"><Search/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search actor or activity" data-testid="input-activity-search"/></label><span className="item-detail" style={{marginLeft:'auto'}}>{filtered.length} entries</span></div>
  <div className="panel"><div className="panel-head"><div><div className="panel-title">Recent activity</div><div className="panel-meta">Newest entries first · times shown in local browser time</div></div><div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><button
       type="button"

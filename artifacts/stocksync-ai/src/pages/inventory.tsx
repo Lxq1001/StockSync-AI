@@ -36,7 +36,7 @@ export function InventoryPage({ data, update, toast, startDraft }: PageProps & {
       {tasks.length ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Item</th><th>Suggested qty</th><th>Total cost</th><th>Cover</th><th>Action</th></tr></thead><tbody>
         {tasks.map(t => <tr key={t.sku.id} data-testid={`row-task-${t.sku.id}`}>
           <td><div className="item-name">{t.sku.name}</div><div className="item-detail">{supplierName(data, t.sku.supplierId)}</div></td>
-          <td className="mono">{t.quantity} {t.sku.unit}</td><td className="mono">{money(t.totalCost)}</td>
+          <td className="mono">{t.quantity}</td><td className="mono">{money(t.totalCost)}</td>
           <td><span className="forecast urgent">{formatCover(t.sku)}</span></td>
           <td><div className="row-actions start"><button className="button small primary" onClick={() => startDraft(t.sku.id, t.quantity)} data-testid={`button-approve-task-${t.sku.id}`}><Check /> Approve</button><button className="button small danger" onClick={() => promptReject(t.sku.id, t.sku.name)} data-testid={`button-reject-task-${t.sku.id}`}><X /> Reject</button></div></td>
         </tr>)}</tbody></table></div>
@@ -52,7 +52,7 @@ export function InventoryPage({ data, update, toast, startDraft }: PageProps & {
       {filtered.map(i => { const low = isLowCover(i); return <tr key={i.id} data-testid={`row-inventory-${i.id}`}>
         <td><div className="item-name">{i.name}</div><div className="item-detail">{i.category} · {supplierName(data, i.supplierId)}</div></td>
         <td><b>{i.onHand}</b></td>
-        <td title="Latest weekly sales ÷ 7, rounded up">{i.avgDailyDemand} {i.unit}/day</td>
+        <td>{i.avgDailyDemand} {i.unit}/day</td>
         <td><span className={`forecast ${low ? 'cover-low' : ''}`} data-testid={`text-cover-${i.id}`}>{formatCover(i)}</span></td>
         <td>{money(i.unitCost)}/{i.unit}</td>
         <td><div className="row-actions start"><button className="button small" onClick={() => setModal({ type: 'edit', id: i.id })} data-testid={`button-edit-${i.id}`}><Pencil /> Edit</button><button className={`button small ${low ? 'primary' : ''}`} onClick={() => setModal({ type: 'order', id: i.id })} data-testid={`button-order-${i.id}`}><ShoppingCart /> Order</button></div></td>
