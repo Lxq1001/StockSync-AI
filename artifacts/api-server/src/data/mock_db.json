@@ -3,7 +3,7 @@
     "id": "SKU1",
     "name": "Fresh Milk (1L)",
     "category": "Dairy & Refrigerated",
-    "stock": 10,
+    "stock": 15,
     "item_price": 7.50,
     "supplier_id": "S1"
   },
@@ -11,7 +11,7 @@
     "id": "SKU2",
     "name": "Butter (250G)",
     "category": "Dairy & Refrigerated",
-    "stock": 8,
+    "stock": 10,
     "item_price": 10.00,
     "supplier_id": "S1"
   },
@@ -19,7 +19,7 @@
     "id": "SKU3",
     "name": "Eggs (10 pcs)",
     "category": "Dairy & Refrigerated",
-    "stock": 3,
+    "stock": 13,
     "item_price": 6.50,
     "supplier_id": "S1"
   },
@@ -27,7 +27,7 @@
     "id": "SKU4",
     "name": "Cheese (200G)",
     "category": "Dairy & Refrigerated",
-    "stock": 5,
+    "stock": 10,
     "item_price": 12.00,
     "supplier_id": "S1"
   },
@@ -35,7 +35,7 @@
     "id": "SKU5",
     "name": "Yogurt (500G)",
     "category": "Dairy & Refrigerated",
-    "stock": 18,
+    "stock": 19,
     "item_price": 8.00,
     "supplier_id": "S1"
   },
@@ -43,7 +43,7 @@
     "id": "SKU6",
     "name": "Rice (5KG)",
     "category": "Staples & Grains",
-    "stock": 7,
+    "stock": 16,
     "item_price": 30.00,
     "supplier_id": "S2"
   },
@@ -51,7 +51,7 @@
     "id": "SKU7",
     "name": "Bread (400g)",
     "category": "Staples & Grains",
-    "stock": 6,
+    "stock": 11,
     "item_price": 4.00,
     "supplier_id": "S2"
   },
@@ -59,7 +59,7 @@
     "id": "SKU8",
     "name": "Instant Noodles (5 PACK)",
     "category": "Staples & Grains",
-    "stock": 45,
+    "stock": 28,
     "item_price": 5.50,
     "supplier_id": "S2"
  },
@@ -67,7 +67,7 @@
     "id": "SKU9",
     "name": "Flour (1KG)",
     "category": "Staples & Grains",
-    "stock": 18,
+    "stock": 21,
     "item_price": 3.50,
     "supplier_id": "S2"
  },
@@ -75,7 +75,7 @@
     "id": "SKU10",
     "name": "Cooking Oil (1KG)",
     "category": "Staples & Grains",
-    "stock": 8,
+    "stock": 12,
     "item_price": 7.00,
     "supplier_id": "S2"
  },
@@ -83,7 +83,7 @@
     "id": "SKU11",
     "name": "Toothpaste (150G)",
     "category": "Personal & Household Care",
-    "stock":55,
+    "stock":27,
     "item_price": 7.00,
     "supplier_id": "S3"
  },
@@ -91,7 +91,7 @@
     "id": "SKU12",
     "name": "Shampoo (650ML)",
     "category": "Personal & Household Care",
-    "stock":17,
+    "stock":25,
     "item_price": 18.00,
     "supplier_id": "S3"
  },
@@ -99,7 +99,7 @@
    "id": "SKU13",
     "name": "Body Wash (500ML)",
     "category": "Personal & Household Care",
-    "stock":5,
+    "stock":18,
     "item_price": 12.00,
     "supplier_id": "S3"
  },
