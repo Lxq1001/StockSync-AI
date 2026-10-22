@@ -6,7 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './emailReceipt';
+export * from './emailReceiptTransport';
+export * from './emailSettings';
+export * from './emailSettingsTransport';
 export * from './healthStatus';
+export * from './orderEmailInput';
 export * from './stockDataset';
 export * from './stockDatasetInventoryItem';
 export * from './stockDatasetSuppliersItem';

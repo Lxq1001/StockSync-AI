@@ -54,3 +54,4 @@ Thumbs.db
 .env.*
 !.env.example
 attached_assets/*.env
+**/.stocksync-mail/

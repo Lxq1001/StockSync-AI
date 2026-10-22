@@ -5,3 +5,5 @@
 .local
 /generated-artifacts
 attached_assets/*.env
+**/.stocksync-mail/
+.env.local

@@ -17,6 +17,24 @@ const provided: ProvidedDataset = {
 };
 const initialData = () => providedWorkspace(provided);
 
+test('a provider-accepted send stores the real sender and receipt without claiming delivery', () => {
+  const data = initialData();
+  const draft = buildDraft(data, data.skus[0].id, 2);
+  const receipt = {
+    sendId: draft.sendId!, messageId: 'mock-accepted-message', from: 'store@example.test',
+    acceptedAt: '2026-10-22T00:00:00Z', transport: 'gmail' as const,
+  };
+  const sent = sendDraft(setDraft(data, draft), { ...draft, from: receipt.from }, receipt.acceptedAt, receipt);
+  assert.equal(sent.order.send?.note, 'Real email accepted by Gmail');
+  assert.equal(sent.order.send?.from, receipt.from);
+  assert.deepEqual(sent.order.send?.receipt, receipt);
+  assert.equal(sent.data.draft, undefined);
+  assert.match(sent.data.audit[0].details, /delivery not verified/);
+  const storage = new MemStore();
+  saveStore(storage, sent.data);
+  assert.deepEqual(loadStore(storage).data.orders[0].send?.receipt, receipt);
+});
+
 test('dataset response explains local HTML routing mistakes without a JSON parsing crash', async () => {
   await assert.rejects(readDatasetResponse(new Response('<!DOCTYPE html>', {
     headers: { 'content-type': 'text/html' },

@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import emailRouter from "./email";
 import { GetStockDatasetResponse } from "@workspace/api-zod";
 import inventory from "../data/mock_db.json";
 import suppliers from "../data/suppliers.json";
@@ -11,6 +12,7 @@ const dataset = GetStockDatasetResponse.parse({ inventory, suppliers, salesTrans
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(emailRouter);
 router.get("/stock-dataset", (_req, res) => {
   res.set("Cache-Control", "no-store").json(dataset);
 });

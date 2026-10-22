@@ -1,6 +1,7 @@
 - [GitHub connector availability](github-connector-availability.md) — verify a callable connection after attachment; an “attached” result alone may not expose GitHub API access.
-- [Demo and production boundaries](demo-production-boundaries.md) — an email-app handoff and user-confirmed status do not verify supplier delivery or create an immutable audit record.
+- [Demo and production boundaries](demo-production-boundaries.md) — Gmail acceptance is not supplier delivery; old handoff records and browser-local activity are not immutable audit evidence.
 - [Account data boundaries](account-data-boundaries.md) — do not assign the old anonymous demo workspace to the first account that signs in.
 - [UI scope boundaries](ui-scope-boundaries.md) — retain the original demo components and Activity Log; authentication and PDF generation are out of scope.
 - [Supplied datasets only](dataset-source-policy.md) — the user retired the original sample database; use supplied data only, never old samples as a reset or fallback.
 - [Local routing boundary](local-routing-boundary.md) — standalone VS Code runs need their own frontend/API router; a Vite page returning HTML is not dataset JSON.
+- [Shared mailbox boundaries](shared-mailbox-boundaries.md) — actual sending without website login must work in Replit and VS Code; keep private access, recipient approval, and safe retry behavior.
