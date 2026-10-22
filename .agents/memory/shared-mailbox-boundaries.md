@@ -1,21 +1,27 @@
 ---
 name: Shared-mailbox sending boundaries
-description: User-required no-login sending on both Replit and VS Code, with private access and conservative retry behavior.
+description: Default Gmail composer handoff on Replit and VS Code; optional legacy shared-mailbox API safety.
 ---
 
-Supplier email must work in both Replit and a standalone VS Code download. Keep one owner-configured shared Gmail sender without website login or per-visitor Google sign-in.
+The default Order Email flow opens Gmail with the supplier, subject, and template filled in. It must work in both Replit and standalone VS Code without Google Cloud, SMTP, or Replit-mailbox configuration.
 
-**Why:** The user explicitly confirmed retaining one shared Gmail sender after considering per-user Google authorization and declining the Google Cloud setup. Both Replit and VS Code remain required; a source download does not transfer Replit's mailbox authorization.
+**Why:** After choosing a shared sender, the user reported the blank shared-mailbox From field and requested a simpler alternative: a Gmail sign-in/compose link with the template filled in. They do not want complex integration setup.
 
-**How to apply:** Retain a Replit Gmail connection for hosted development and a separately owner-configured Gmail SMTP option for local development. Keep From tied to the actual shared sending account and credentials server-only, outside source exports. Do not add a Google account selector, OAuth callback, website signup, or password-entry form unless the user explicitly changes this decision. No Google Cloud client setup is needed for the existing Replit shared-mailbox mode.
+**How to apply:** Do not gate Open Gmail on server mailbox settings. Let Gmail handle sign-in, sender selection, and actual Send. The intended shared mailbox can be chosen there, but StockSync cannot verify the selected account. Never collect Google passwords or imply that StockSync authenticated the sender. Keep one Save, Edit, and Discard.
 
-No-login sending is for localhost/private trusted-staff access, not an unrestricted public sending service. Server recipient approval and sending limits reduce abuse but do not authenticate visitors.
+Opening Gmail must not create a Sent order or claim email delivery. A user-confirmed tracking record is allowed only after explicitly confirming the saved template was sent.
+
+**Why:** A compose URL grants no Gmail API access and cannot detect sending, cancellation, account selection, or delivery.
+
+**How to apply:** Clearly distinguish manual confirmation from legacy provider acceptance receipts. Preserve drafts if Gmail is merely opened or the user has not sent yet. If Google sign-in drops compose parameters, tell users to return and reopen the Gmail link after signing in.
+
+If the optional legacy direct-send API is used, no-login sending is for localhost/private trusted-staff access, not an unrestricted public sending service. Server recipient approval and sending limits reduce abuse but do not authenticate visitors.
 
 **Why:** Every visitor otherwise acts through the owner's mailbox. Supplier catalog entries are not, by themselves, permission to email those addresses.
 
 **How to apply:** Preserve server-side recipient approval, assigned-supplier validation, private-production gating, and sending limits. Do not silently enable production or expand recipient approval from the dataset alone.
 
-Uncertain sends must not be automatically retried, and known acceptance receipts must survive server restarts.
+For the optional legacy direct-send API, uncertain sends must not be automatically retried, and known acceptance receipts must survive server restarts.
 
 **Why:** A connection or browser-storage failure can occur after Gmail accepts the message; a blind retry can duplicate a real supplier order.
 

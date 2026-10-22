@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import {
-  buildDraft, buildMailtoUrl, editItem, initialData as emptyData, RETIRED_STORE_KEYS, loadStore, rejectSuggestion, saveStore, sendDraft,
+  buildDraft, buildMailtoUrl, buildGmailComposeUrl, editItem, initialData as emptyData, RETIRED_STORE_KEYS, loadStore, rejectSuggestion, saveStore, sendDraft,
   setDraft, setOrderStatus, STORE_KEY, suggestions, validateItemEdit, type StoreData,
 } from './procurement';
 import { applyImport, parseCsv, parseSalesFile, previewImport, sampleCsv } from './sales-import';
@@ -97,6 +97,23 @@ test('mailto link carries the editable recipient, subject, and complete encoded 
   const draft = buildDraft(initialData(), 'SKU1', 30);
   const url = buildMailtoUrl({ ...draft, to: 'buyer@example.com', subject: 'Order & delivery', body: 'Hello team,\nPlease confirm.' });
   assert.equal(url, 'mailto:buyer@example.com?subject=Order%20%26%20delivery&body=Hello%20team%2C%0APlease%20confirm.');
+});
+
+test('Gmail composer carries the saved recipient, subject, Unicode and full multiline template', () => {
+  const data = initialData();
+  const draft = buildDraft(data, 'SKU1', 20);
+  const before = JSON.stringify(data);
+  const content = { to: 'supplier@example.test', subject: 'Order & delivery + 50% ✓', body: 'Hello team,\n\nMilk & rice: RM 150.00\nThank you,\nStore + Manager' };
+  const url = new URL(buildGmailComposeUrl(content));
+  assert.equal(url.origin, 'https://mail.google.com');
+  assert.equal(url.pathname, '/mail/');
+  assert.equal(url.searchParams.get('view'), 'cm');
+  assert.equal(url.searchParams.get('fs'), '1');
+  assert.equal(url.searchParams.get('to'), content.to);
+  assert.equal(url.searchParams.get('su'), content.subject);
+  assert.equal(url.searchParams.get('body'), content.body);
+  assert.equal(new URL(buildGmailComposeUrl(draft)).searchParams.get('body'), draft.body);
+  assert.equal(JSON.stringify(data), before, 'building a Gmail link must not create an order or send');
 });
 
 test('draft persists, send creates exactly one Sent order and blocks duplicates', () => {

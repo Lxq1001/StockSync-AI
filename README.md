@@ -24,16 +24,34 @@ provides a local router:
 
 No Replit login, external database, or secrets are needed to load the supplied
 datasets. Browser-local edits and orders remain local to that browser.
-Direct email sending uses the shared store Gmail mailbox, with no website login.
-Loading the datasets does not require configuring email.
+The default Order Email page opens a filled Gmail composer in a new tab.
+It needs no Google Cloud project, Replit Gmail connection, SMTP credentials,
+or website login. Sign in to Gmail if necessary and click Send inside Gmail.
 
-## Direct supplier email
+## Simple supplier email (default)
 
-The page has **Send email**, **Edit**, one **Save**, and **Discard**.
+The page has **Open Gmail**, **Edit**, one **Save**, and **Discard**.
 Edit changes the subject and content locally; Save persists the edited template.
 Discard while editing restores the saved template; otherwise it removes the draft.
-The To address comes from the assigned supplier; From comes from the actual shared
-mailbox. These addresses cannot be changed in the editor.
+The To address comes from the assigned supplier. Gmail fills the actual From
+address after you choose a Gmail account; choose your shared mailbox there if that
+is the intended sender. Subject and the full template are carried in the Gmail link.
+
+After sending inside Gmail, return to StockSync and confirm **I sent it — record
+order** if you want purchase-order tracking. Opening Gmail alone never creates a
+Sent order. The app cannot detect a Gmail send or verify delivery; these records
+are explicitly based on your confirmation. **Not sent yet** keeps the draft.
+If Google's sign-in redirects to the inbox instead of the composer, return to
+StockSync and click Open Gmail again after signing in.
+
+This works the same in Replit and at `http://localhost:3000`.
+
+## Optional server-side sending (existing backend, not used by the default page)
+
+The earlier direct-send API remains available for an owner-managed shared mailbox.
+The following configuration is only needed if you separately use that API—not
+for the default Open Gmail flow. Set `STOCKSYNC_EMAIL_ENABLED=false` on the API
+if you do not intend to use direct sending. Existing server receipts are retained.
 
 ### On Replit
 

@@ -4,4 +4,4 @@
 - [UI scope boundaries](ui-scope-boundaries.md) — retain the original demo components and Activity Log; authentication and PDF generation are out of scope.
 - [Supplied datasets only](dataset-source-policy.md) — the user retired the original sample database; use supplied data only, never old samples as a reset or fallback.
 - [Local routing boundary](local-routing-boundary.md) — standalone VS Code runs need their own frontend/API router; a Vite page returning HTML is not dataset JSON.
-- [Shared mailbox boundaries](shared-mailbox-boundaries.md) — actual sending without website login must work in Replit and VS Code; keep private access, recipient approval, and safe retry behavior.
+- [Shared mailbox boundaries](shared-mailbox-boundaries.md) — default to a filled Gmail composer without setup; never infer sending from opening it. Keep legacy API safeguards.

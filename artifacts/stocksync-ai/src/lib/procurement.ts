@@ -125,15 +125,26 @@ export function buildDraft(data: StoreData, skuId: string, quantity: number): Te
 export const setDraft = (data: StoreData, draft: TemplateDraft | undefined): StoreData => ({ ...data, draft });
 
 const EMAIL = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
-export function validateDraft(d: Pick<TemplateDraft, 'to' | 'from' | 'subject' | 'body'>): string | null {
+export function validateEmailContent(d: Pick<TemplateDraft, 'to' | 'subject' | 'body'>): string | null {
   if (!EMAIL.test(d.to.trim())) return 'Enter one valid recipient email address in To.';
-  const fromAddr = d.from.match(/<([^>]+)>/)?.[1] ?? d.from;
-  if (!EMAIL.test(fromAddr.trim())) return 'Enter a valid sender in From.';
   if (!d.subject.trim()) return 'Subject is required.';
   if (d.subject.length > 200) return 'Subject must be 200 characters or fewer.';
   if (!d.body.trim()) return 'Content is required.';
   if (d.body.length > 5000) return 'Content must be 5,000 characters or fewer.';
   return null;
+}
+export function validateDraft(d: Pick<TemplateDraft, 'to' | 'from' | 'subject' | 'body'>): string | null {
+  const problem = validateEmailContent(d);
+  if (problem) return problem;
+  const fromAddr = d.from.match(/<([^>]+)>/)?.[1] ?? d.from;
+  return EMAIL.test(fromAddr.trim()) ? null : 'Enter a valid sender in From.';
+}
+/** Opens the real Gmail composer; this does not send or verify delivery. */
+export function buildGmailComposeUrl(draft: Pick<TemplateDraft, 'to' | 'subject' | 'body'>): string {
+  const params = new URLSearchParams({
+    view: 'cm', fs: '1', to: draft.to.trim(), su: draft.subject, body: draft.body,
+  });
+  return `https://mail.google.com/mail/?${params.toString()}`;
 }
 /** Builds a prefilled email-app handoff; the app cannot verify whether the user sends it. */
 export function buildMailtoUrl(draft: Pick<TemplateDraft, 'to' | 'subject' | 'body'>): string {
