@@ -3,6 +3,113 @@ import { Link, Route, Switch, useLocation, Router as WouterRouter } from 'wouter
 import { Activity, AlertTriangle, Boxes, Check, CheckCheck, ChevronDown, ClipboardList, Package, Search, Settings2, ShieldCheck, Store, Truck, X, RotateCcw, ArrowUpRight, CircleDollarSign, FileClock } from 'lucide-react';
 
 type SKU = { id:string; name:string; category:string; onHand:number; unit:string; avgDailyDemand:number; leadTimeDays:number; reorderBuffer:number; supplierId:string; unitCost:number; recentSales:number[]; batchSize:number };
+
+type ApiInventoryItem = {
+  id: string;
+  name: string;
+  stock: number;
+  threshold: number;
+};
+
+
+
+function mapApiInventoryItem(
+  item: ApiInventoryItem,
+  existing?: SKU,
+  matchedSupplier?: Supplier,
+): SKU {
+  const demoDefaults: Record<
+    string,
+    {
+      category: string;
+      unit: string;
+      avgDailyDemand: number;
+      leadTimeDays: number;
+      unitCost: number;
+      batchSize: number;
+      recentSales: number[];
+    }
+  > = {
+    SKU2: {
+      category: "Bakery",
+      unit: "loaf",
+      avgDailyDemand: 6,
+      leadTimeDays: 1,
+      unitCost: 4.5,
+      batchSize: 12,
+      recentSales: [5, 6, 7, 5, 6, 6, 7],
+    },
+    SKU3: {
+      category: "Fresh protein",
+      unit: "pack",
+      avgDailyDemand: 2,
+      leadTimeDays: 2,
+      unitCost: 5.5,
+      batchSize: 12,
+      recentSales: [2, 2, 1, 3, 2, 2, 2],
+    },
+    SKU4: {
+      category: "Dry goods",
+      unit: "bag",
+      avgDailyDemand: 1,
+      leadTimeDays: 2,
+      unitCost: 25,
+      batchSize: 10,
+      recentSales: [1, 1, 0, 1, 1, 1, 2],
+    },
+  };
+
+  const defaults = demoDefaults[item.id];
+
+  const avgDailyDemand =
+    existing?.avgDailyDemand ??
+    defaults?.avgDailyDemand ??
+    1;
+
+  const leadTimeDays =
+    existing?.leadTimeDays ??
+    matchedSupplier?.leadTimeDays ??
+    defaults?.leadTimeDays ??
+    3;
+
+  
+return {
+  id: item.id,
+  name: item.name,
+
+  category: defaults?.category ?? existing?.category ?? "General",
+  onHand: item.stock,
+  unit: defaults?.unit ?? existing?.unit ?? "units",
+
+  avgDailyDemand:
+    defaults?.avgDailyDemand ?? existing?.avgDailyDemand ?? 1,
+
+  leadTimeDays:
+    defaults?.leadTimeDays ??
+    existing?.leadTimeDays ??
+    matchedSupplier?.leadTimeDays ??
+    3,
+
+  reorderBuffer: Math.max(
+    0,
+    item.threshold /
+      (defaults?.avgDailyDemand ?? existing?.avgDailyDemand ?? 1) -
+      (defaults?.leadTimeDays ?? existing?.leadTimeDays ?? 3),
+  ),
+
+  supplierId:
+    matchedSupplier?.id ?? existing?.supplierId ?? "",
+
+  unitCost: defaults?.unitCost ?? existing?.unitCost ?? 0,
+
+  recentSales:
+    defaults?.recentSales ?? existing?.recentSales ?? [],
+
+  batchSize:
+    defaults?.batchSize ?? existing?.batchSize ?? 1,
+};
+}
+
 type Supplier = { id:string; name:string; contactMethod:string; MOQ:number; leadTimeDays:number };
 type OrderStatus = 'Awaiting approval'|'Pending Delivery'|'Received'|'Rejected';
 type PurchaseOrder = { id:string; itemId:string; supplierId:string; quantity:number; unitCost:number; totalCost:number; status:OrderStatus; createdAt:string; depletionDays:number; approvalDetails?:string; approvedBy?:string };
@@ -48,6 +155,92 @@ function loadData():StoreData { try { const stored=localStorage.getItem(STORE_KE
 
 function App(){
  const [data,setData]=useState<StoreData>(loadData);
+
+  
+useEffect(() => {
+  let cancelled = false;
+
+  async function loadInventoryFromApi() {
+    try {
+      const response = await fetch("/api/inventory");
+
+      if (!response.ok) {
+        throw new Error(
+          `Inventory API failed: ${response.status}`,
+        );
+      }
+
+      const items: ApiInventoryItem[] = await response.json();
+
+      if (!Array.isArray(items)) {
+        throw new Error("Inventory API did not return an array");
+      }
+
+      if (cancelled) return;
+
+      
+setData((current) => {
+  const skuMatches: Record<string, string> = {
+    SKU1: "sku-002", // Fresh Milk -> Fresh milk
+    SKU5: "sku-004", // Cooking Oil (1L) -> Cooking oil
+  };
+
+  const supplierMatches: Record<string, string> = {
+  SKU1: "sup-02", // Fresh Milk
+  SKU2: "sup-02", // Wholemeal Bread — demo assumption
+  SKU3: "sup-03", // Eggs — demo assumption
+  SKU4: "sup-01", // Rice — demo assumption
+  SKU5: "sup-03", // Cooking Oil
+};
+
+  const skus = items.map((item) => {
+    const oldId = skuMatches[item.id];
+
+    // Look up original demo data, even after API data was saved.
+    const existing =
+      (oldId
+        ? initialData.skus.find((sku) => sku.id === oldId)
+        : undefined) ??
+      current.skus.find((sku) => sku.id === item.id);
+
+    const supplierId = supplierMatches[item.id];
+    const supplier = supplierId
+      ? current.suppliers.find((s) => s.id === supplierId)
+      : undefined;
+
+    const mapped = mapApiInventoryItem(
+      item,
+      existing,
+      supplier,
+    );
+
+    return {
+      ...mapped,
+      supplierId: supplier?.id ?? existing?.supplierId ?? "",
+    };
+  });
+
+  return {
+    ...current,
+    skus,
+  };
+});
+
+    } catch (error) {
+      console.error(
+        "Unable to load inventory from API:",
+        error,
+      );
+    }
+  }
+
+  void loadInventoryFromApi();
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
+
  const [notice,setNotice]=useState('');
  const [modal,setModal]=useState<{type:'edit'|'reject'|'dispatch'|'settings';id?:string}|null>(null);
  const pageName=usePageName();
