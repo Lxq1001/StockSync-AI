@@ -1,4 +1,6 @@
-// Local, browser-only procurement helpers. No authentication, server or email provider is involved.
+import { mockItems, mockSalesTransactions, mockSalesWindow, mockSuppliers } from '../data/mockDataset';
+
+// Inventory decisions stay browser-local; Gmail sends are handled by the API server.
 export type SKU = {
   id: string; name: string; category: string; onHand: number; unit: string;
   avgDailyDemand: number; leadTimeDays: number; reorderBuffer: number;
@@ -8,11 +10,14 @@ export type Supplier = { id: string; name: string; contactMethod: string; MOQ: n
 /** Tracked purchase-order statuses. Status changes are tracking only and never change stock. */
 export const ORDER_STATUSES = ['Sent', 'Pending Delivery', 'Received'] as const;
 export type OrderStatus = typeof ORDER_STATUSES[number];
-export type SimulatedSend = { to: string; from: string; subject: string; body: string; recordedAt: string; note: 'Demo only - no real email sent' | 'Sent from external mail app; confirmed by user' };
+export type EmailRecord = {
+  to: string; from: string; subject: string; body: string; recordedAt: string;
+  note: 'Sent via connected Gmail account'; gmailMessageId?: string;
+};
 export type PurchaseOrder = {
   id: string; itemId: string; supplierId: string; quantity: number; unitCost: number;
   totalCost: number; status: OrderStatus; createdAt: string; depletionDays: number;
-  approvedBy?: string; send?: SimulatedSend;
+  approvedBy?: string; send?: EmailRecord;
 };
 /** Legacy v1 suggestions (Awaiting approval / Rejected) kept for reference, never shown as Sent. */
 export type LegacyOrder = { id: string; itemId: string; supplierId: string; quantity: number; unitCost: number; totalCost: number; status: string; createdAt: string };
@@ -21,10 +26,12 @@ export type TemplateDraft = {
   itemId: string; supplierId: string; quantity: number; unitCost: number;
   to: string; from: string; subject: string; body: string; createdAt: string;
 };
+export type TestEmailDraft = { to: string; subject: string; body: string };
 export type StoreData = {
   version: 2;
   skus: SKU[]; suppliers: Supplier[]; orders: PurchaseOrder[]; audit: AuditEntry[];
   budgetCap: number; rejectedSuggestions: string[]; legacyOrders: LegacyOrder[];
+  salesTransactions?: import('../data/mockDataset').MockSaleTransaction[];
   draft?: TemplateDraft; lastImport?: { importedAt: string; rows: number; windowStart: string; windowEnd: string };
 };
 
@@ -39,34 +46,32 @@ export const formatMoney = (value: number) =>
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const uid = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
-export const initialData = (): StoreData => ({
-  version: 2,
-  skus: [
-    { id: 'sku-001', name: 'Jasmine rice', category: 'Dry goods', onHand: 18, unit: 'kg', avgDailyDemand: 5.2, leadTimeDays: 2, reorderBuffer: 2, supplierId: 'sup-01', unitCost: 4.8, recentSales: [4, 5, 6, 5, 4, 6, 6], batchSize: 25 },
-    { id: 'sku-002', name: 'Fresh milk', category: 'Chilled', onHand: 9, unit: 'L', avgDailyDemand: 8.4, leadTimeDays: 1, reorderBuffer: 1, supplierId: 'sup-02', unitCost: 7.2, recentSales: [8, 9, 7, 9, 8, 10, 8], batchSize: 30 },
-    { id: 'sku-003', name: 'Chicken breast', category: 'Fresh protein', onHand: 14, unit: 'kg', avgDailyDemand: 6.1, leadTimeDays: 1, reorderBuffer: 2, supplierId: 'sup-02', unitCost: 18.9, recentSales: [5, 6, 7, 5, 6, 7, 6], batchSize: 20 },
-    { id: 'sku-004', name: 'Cooking oil', category: 'Dry goods', onHand: 31, unit: 'L', avgDailyDemand: 3.1, leadTimeDays: 3, reorderBuffer: 3, supplierId: 'sup-03', unitCost: 8.5, recentSales: [3, 4, 3, 3, 2, 4, 3], batchSize: 24 },
-    { id: 'sku-005', name: 'Kopi beans, medium roast', category: 'Beverage', onHand: 4.5, unit: 'kg', avgDailyDemand: 1.4, leadTimeDays: 4, reorderBuffer: 1, supplierId: 'sup-04', unitCost: 42, recentSales: [1, 2, 1, 1, 2, 1, 2], batchSize: 12 },
-    { id: 'sku-006', name: 'Brown sugar', category: 'Dry goods', onHand: 12, unit: 'kg', avgDailyDemand: 1.8, leadTimeDays: 2, reorderBuffer: 2, supplierId: 'sup-01', unitCost: 5.6, recentSales: [2, 2, 1, 2, 2, 1, 2], batchSize: 20 },
-    { id: 'sku-007', name: 'Eggs, grade A', category: 'Fresh protein', onHand: 42, unit: 'tray', avgDailyDemand: 7.2, leadTimeDays: 1, reorderBuffer: 3, supplierId: 'sup-03', unitCost: 13.5, recentSales: [7, 8, 6, 8, 7, 8, 7], batchSize: 30 },
-    { id: 'sku-008', name: 'Oat milk', category: 'Chilled', onHand: 16, unit: 'carton', avgDailyDemand: 2.3, leadTimeDays: 2, reorderBuffer: 2, supplierId: 'sup-02', unitCost: 11.9, recentSales: [2, 3, 2, 2, 3, 2, 2], batchSize: 18 },
-  ],
-  suppliers: [
-    { id: 'sup-01', name: 'Sinar Pantry Supply', contactMethod: 'Email', MOQ: 10, leadTimeDays: 2 },
-    { id: 'sup-02', name: 'Pasar Segar Wholesale', contactMethod: 'Email', MOQ: 6, leadTimeDays: 1 },
-    { id: 'sup-03', name: 'Kedai Mart Trading', contactMethod: 'Email', MOQ: 12, leadTimeDays: 2 },
-    { id: 'sup-04', name: 'Bukit Roast Cooperative', contactMethod: 'Email', MOQ: 4, leadTimeDays: 4 },
-  ],
-  orders: [
-    { id: 'PO-2406', itemId: 'sku-001', supplierId: 'sup-01', quantity: 24, unitCost: 4.8, totalCost: 115.2, status: 'Pending Delivery', createdAt: '2025-04-17T14:20:00', depletionDays: 3.4, approvedBy: 'Sample manager' },
-    { id: 'PO-2405', itemId: 'sku-003', supplierId: 'sup-02', quantity: 12, unitCost: 18.9, totalCost: 226.8, status: 'Received', createdAt: '2025-04-16T11:10:00', depletionDays: 2.3, approvedBy: 'Sample manager' },
-  ],
-  audit: [
-    { id: 'log-3', timestamp: '2025-04-17T14:20:00', actor: 'Sample manager', action: 'Approved order', details: 'PO-2406 · 24 kg Jasmine rice · RM 115.20 · Pending Delivery' },
-    { id: 'log-4', timestamp: '2025-04-16T11:10:00', actor: 'Sample manager', action: 'Marked received', details: 'PO-2405 · 12 kg Chicken breast · received at store' },
-  ],
-  budgetCap: 500, rejectedSuggestions: [], legacyOrders: [],
-});
+export const initialData = (): StoreData => {
+  const suppliers: Supplier[] = mockSuppliers.map(s => ({ ...s, contactMethod: 'Email' }));
+  const skus: SKU[] = mockItems.map(item => {
+    const recentSales = Array.from({ length: 14 }, (_, day) => {
+      const date = new Date(Date.UTC(2026, 9, 8 + day)).toISOString().slice(0, 10);
+      return mockSalesTransactions.find(row => row.item_id === item.id && row.date === date)?.quantity_sold ?? 0;
+    });
+    const supplier = suppliers.find(s => s.id === item.supplierId)!;
+    return {
+      id: item.id, name: item.name, category: item.category, onHand: item.onHand, unit: 'unit',
+      avgDailyDemand: recentSales.reduce((sum, value) => sum + value, 0) / recentSales.length,
+      leadTimeDays: supplier.leadTimeDays, reorderBuffer: 2, supplierId: item.supplierId,
+      unitCost: item.unitCost, recentSales, batchSize: supplier.MOQ,
+    };
+  });
+  return {
+    version: 2, skus, suppliers, orders: [], audit: [], budgetCap: 500,
+    rejectedSuggestions: [], legacyOrders: [], salesTransactions: [...mockSalesTransactions],
+    lastImport: {
+      importedAt: '2026-10-22T00:00:00.000Z',
+      rows: mockSalesTransactions.length,
+      windowStart: mockSalesWindow.start,
+      windowEnd: mockSalesWindow.end,
+    },
+  };
+};
 
 /** Days of stock at current average use. Zero demand means no depletion risk. */
 export function estimatedCover(sku: SKU): number {
@@ -126,7 +131,7 @@ export function editItem(data: StoreData, skuId: string, input: ItemEdit): Store
   };
 }
 
-export const supplierEmail = (s: Supplier) => s.email ?? `orders@${s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.example`;
+export const supplierEmail = (s: Supplier) => s.email ?? '';
 
 export function buildDraft(data: StoreData, skuId: string, quantity: number): TemplateDraft {
   const sku = data.skus.find(s => s.id === skuId);
@@ -142,6 +147,22 @@ export function buildDraft(data: StoreData, skuId: string, quantity: number): Te
     body: `Hello ${supplier.name} team,\n\nWe would like to order the following for our store:\n\nItem: ${sku.name}\nQuantity: ${quantity} ${sku.unit}\nUnit price: ${formatMoney(sku.unitCost)} per ${sku.unit}\nTotal: ${formatMoney(total)}\n\nPlease confirm availability and your delivery date. Our usual lead time with you is ${supplier.leadTimeDays} day${supplier.leadTimeDays === 1 ? '' : 's'}.\n\nThank you,\n${MANAGER}\nStore manager`,
   };
 }
+export function buildTestEmail(data: StoreData, draft: TemplateDraft): TestEmailDraft {
+  const sku = data.skus.find(s => s.id === draft.itemId);
+  const supplier = data.suppliers.find(s => s.id === draft.supplierId);
+  if (!sku || !supplier) throw new Error('The selected item or supplier is missing.');
+  return {
+    to: supplier.email ?? draft.to,
+    subject: '[TEST ONLY — DO NOT FULFILL] StockSync AI Gmail connection test',
+    body: `Hello ${supplier.name} team,\n\nThis is a test message from StockSync AI using synthetic data. It is not a purchase order. Please do not reserve, prepare, or deliver any items.\n\nSample item: ${sku.name}\nNo quantity or payment is requested.\n\nThank you,\nStockSync AI test`,
+  };
+}
+export function recordTestEmail(data: StoreData, to: string, messageId: string, now = new Date().toISOString()): StoreData {
+  return {
+    ...data,
+    audit: [log('Gmail test email sent', `Test-only message sent to ${to}; no purchase order was created. Gmail message ID: ${messageId}`, undefined, now), ...data.audit],
+  };
+}
 export const setDraft = (data: StoreData, draft: TemplateDraft | undefined): StoreData => ({ ...data, draft });
 
 const EMAIL = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
@@ -155,19 +176,8 @@ export function validateDraft(d: Pick<TemplateDraft, 'to' | 'from' | 'subject' |
   if (d.body.length > 5000) return 'Content must be 5,000 characters or fewer.';
   return null;
 }
-/** Builds a prefilled Gmail compose URL; the app cannot verify whether the user sends it. */
-export function buildGmailComposeUrl(draft: Pick<TemplateDraft, 'to' | 'subject' | 'body'>): string {
-  const params = new URLSearchParams({
-    view: 'cm',
-    fs: '1',
-    to: draft.to.trim(),
-    su: draft.subject,
-    body: draft.body,
-  });
-  return `https://mail.google.com/mail/?${params.toString()}`;
-}
-/** Records a user-confirmed external send and creates one Sent purchase order. Throws if there is no draft (prevents duplicates). */
-export function sendDraft(data: StoreData, edited: Pick<TemplateDraft, 'to' | 'from' | 'subject' | 'body'>, now = new Date().toISOString()): { data: StoreData; order: PurchaseOrder } {
+/** Records a Gmail-confirmed send and creates one Sent purchase order. Throws if there is no draft (prevents duplicates). */
+export function sendDraft(data: StoreData, edited: Pick<TemplateDraft, 'to' | 'from' | 'subject' | 'body'>, now = new Date().toISOString(), gmailMessageId?: string): { data: StoreData; order: PurchaseOrder } {
   const draft = data.draft;
   if (!draft) throw new Error('This draft was already sent or cleared. No new order was created.');
   const err = validateDraft(edited);
@@ -180,14 +190,14 @@ export function sendDraft(data: StoreData, edited: Pick<TemplateDraft, 'to' | 'f
     id, itemId: draft.itemId, supplierId: draft.supplierId, quantity: draft.quantity, unitCost: draft.unitCost,
     totalCost: round2(draft.quantity * draft.unitCost), status: 'Sent', createdAt: now,
     depletionDays: Number.isFinite(estimatedCover(sku)) ? round2(estimatedCover(sku)) : 0, approvedBy: MANAGER,
-    send: { to: edited.to.trim(), from: 'Not captured (external mail app)', subject: edited.subject.trim(), body: edited.body, recordedAt: now, note: 'Sent from external mail app; confirmed by user' },
+    send: { to: edited.to.trim(), from: 'Connected Gmail account', subject: edited.subject.trim(), body: edited.body, recordedAt: now, note: 'Sent via connected Gmail account', gmailMessageId },
   };
   return {
     order,
     data: {
       ...data, draft: undefined, orders: [order, ...data.orders],
       rejectedSuggestions: data.rejectedSuggestions,
-      audit: [log('Email marked as sent', `${id} · ${draft.quantity} ${sku.unit} ${sku.name} · ${formatMoney(order.totalCost)} · to ${order.send!.to} · user confirmed sent from external mail app · status Sent`, id), ...data.audit],
+      audit: [log('Email sent via Gmail', `${id} · ${draft.quantity} ${sku.unit} ${sku.name} · ${formatMoney(order.totalCost)} · to ${order.send!.to} · status Sent`, id), ...data.audit],
     },
   };
 }
