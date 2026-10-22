@@ -43,6 +43,15 @@ test('item edit validates blank, negative and non-finite and persists', () => {
   assert.deepEqual([sku.name, sku.onHand, sku.unitCost], ['Susu segar', 40, 6.5]);
 });
 
+test('email closing uses Thank you for new and previously saved drafts', () => {
+  const data = initialData();
+  const draft = buildDraft(data, 'sku-002', 30);
+  assert.match(draft.body, /\n\nThank you,\n/);
+  const oldDraft = { ...draft, body: draft.body.replace('\n\nThank you,\n', '\n\nTerima kasih,\n') };
+  const loaded = roundTrip(new MemStore(), setDraft(data, oldDraft));
+  assert.equal(loaded.draft?.body, draft.body);
+});
+
 test('draft persists, send creates exactly one Sent order and blocks duplicates', () => {
   const s = new MemStore();
   const withDraft = roundTrip(s, setDraft(initialData(), buildDraft(initialData(), 'sku-002', 30)));

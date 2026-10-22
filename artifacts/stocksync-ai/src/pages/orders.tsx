@@ -8,7 +8,7 @@ export function OrdersPage({ data, update, toast }: PageProps) {
   const orders = useMemo(() => data.orders.filter(o => (status === 'All statuses' || o.status === status) && `${o.id} ${itemName(data, o.itemId)} ${supplierName(data, o.supplierId)}`.toLowerCase().includes(query.toLowerCase())), [data, query, status]);
   const change = (id: string, next: OrderStatus) => { if (update(d => setOrderStatus(d, id, next))) toast(`${id} marked ${next}. Status tracking only; stock on hand was not changed.`); };
   return <main className="content">
-    <PageTitle eyebrow="Order tracking" title="Purchase orders" subtitle="Orders created from simulated supplier emails, tracked from Sent to Received." />
+    <PageTitle title="Purchase orders" />
     <div className="toolbar"><label className="searchbox"><Search /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search item, supplier or PO" data-testid="input-order-search" /></label><select className="select" value={status} onChange={e => setStatus(e.target.value)} aria-label="Filter order status" data-testid="select-order-status-filter">{['All statuses', ...ORDER_STATUSES].map(s => <option key={s}>{s}</option>)}</select><span className="item-detail" style={{ marginLeft: 'auto' }}>{orders.length} order{orders.length === 1 ? '' : 's'} shown</span></div>
     <div className="panel"><div className="table-wrap"><table className="data-table"><thead><tr><th>Purchase order</th><th>Supplier</th><th>Qty</th><th>Total</th><th>Status</th><th>Created</th></tr></thead><tbody>
       {orders.map(o => <tr key={o.id} data-testid={`row-order-${o.id}`}>

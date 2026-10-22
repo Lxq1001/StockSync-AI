@@ -139,7 +139,7 @@ export function buildDraft(data: StoreData, skuId: string, quantity: number): Te
     itemId: sku.id, supplierId: supplier.id, quantity, unitCost: sku.unitCost, createdAt: new Date().toISOString(),
     to: supplierEmail(supplier), from: `${MANAGER} <${MANAGER_EMAIL}>`,
     subject: `Purchase order request: ${quantity} ${sku.unit} ${sku.name}`,
-    body: `Hello ${supplier.name} team,\n\nWe would like to order the following for our store:\n\nItem: ${sku.name}\nQuantity: ${quantity} ${sku.unit}\nUnit price: ${formatMoney(sku.unitCost)} per ${sku.unit}\nTotal: ${formatMoney(total)}\n\nPlease confirm availability and your delivery date. Our usual lead time with you is ${supplier.leadTimeDays} day${supplier.leadTimeDays === 1 ? '' : 's'}.\n\nTerima kasih,\n${MANAGER}\nStore manager`,
+    body: `Hello ${supplier.name} team,\n\nWe would like to order the following for our store:\n\nItem: ${sku.name}\nQuantity: ${quantity} ${sku.unit}\nUnit price: ${formatMoney(sku.unitCost)} per ${sku.unit}\nTotal: ${formatMoney(total)}\n\nPlease confirm availability and your delivery date. Our usual lead time with you is ${supplier.leadTimeDays} day${supplier.leadTimeDays === 1 ? '' : 's'}.\n\nThank you,\n${MANAGER}\nStore manager`,
   };
 }
 export const setDraft = (data: StoreData, draft: TemplateDraft | undefined): StoreData => ({ ...data, draft });
@@ -238,7 +238,15 @@ export function loadStore(storage: KV | undefined): { data: StoreData; message?:
     const v2 = storage.getItem(STORE_KEY);
     if (v2) {
       const parsed = JSON.parse(v2);
-      if (validV2(parsed)) return { data: parsed };
+      if (validV2(parsed)) {
+        if (parsed.draft) {
+          parsed.draft.body = parsed.draft.body.replace(
+            `\n\nTerima kasih,\n${MANAGER}\nStore manager`,
+            `\n\nThank you,\n${MANAGER}\nStore manager`,
+          );
+        }
+        return { data: parsed };
+      }
       return { data: initialData(), message: 'Saved demo data was unreadable, so the original sample was loaded. It will be replaced on your next change.' };
     }
     const v1 = storage.getItem(LEGACY_KEY);

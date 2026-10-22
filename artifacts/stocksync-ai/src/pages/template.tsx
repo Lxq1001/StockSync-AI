@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Boxes, Pencil, Send, Trash2 } from 'lucide-react';
-import { Empty, FormError, PageTitle, money, supplierName, type PageProps } from '@/components/common';
+import { Empty, FormError, PageTitle, type PageProps } from '@/components/common';
 import { sendDraft, setDraft, validateDraft, type TemplateDraft } from '@/lib/procurement';
 
 type Field = 'to' | 'from' | 'subject' | 'body';
@@ -21,7 +21,6 @@ export function TemplatePage({ data, update, toast }: PageProps) {
     </Empty></div>
   </main>;
 
-  const sku = data.skus.find(s => s.id === draft.itemId);
   const setField = (f: Field, v: string) => { setError(''); update(d => d.draft ? setDraft(d, { ...d.draft, [f]: v } as TemplateDraft) : d); };
   const send = () => {
     if (sendingRef.current) return;
@@ -38,14 +37,14 @@ export function TemplatePage({ data, update, toast }: PageProps) {
   const row = (f: Exclude<Field, 'body'>, label: string) => <label className="mail-row"><span>{label}</span><input value={draft[f]} readOnly={ro} onChange={e => setField(f, e.target.value)} data-testid={`input-mail-${f}`} /></label>;
 
   return <main className="content">
-    <PageTitle eyebrow="Supplier email · draft saved in this browser" title="Order email" subtitle={`${draft.quantity} ${sku?.unit ?? ''} ${sku?.name ?? 'Unknown item'} from ${supplierName(data, draft.supplierId)} · ${money(draft.quantity * draft.unitCost)}`} />
+    <PageTitle title="Order email" />
     <section className="mail-window" data-testid="panel-mail">
       <div className="mail-bar"><span className="mail-title">New message</span><span className="pill">{editing ? 'Editing' : 'Read-only'}</span></div>
       {row('to', 'To')}{row('from', 'From')}{row('subject', 'Subject')}
       <textarea className="mail-body" value={draft.body} readOnly={ro} onChange={e => setField('body', e.target.value)} aria-label="Content" rows={16} data-testid="input-mail-body" />
       <FormError message={error} />
       <div className="mail-actions">
-        <button className="button primary" onClick={send} disabled={sending} data-testid="button-send-email"><Send /> {sending ? 'Recording...' : 'Send (demo)'}</button>
+        <button className="button primary" onClick={send} disabled={sending} data-testid="button-send-email"><Send /> {sending ? 'Recording...' : 'Send'}</button>
         <button className="button" onClick={() => setEditing(e => !e)} aria-pressed={editing} disabled={sending} data-testid="button-edit-email"><Pencil /> {editing ? 'Done editing' : 'Edit'}</button>
         <button className="button small danger push" onClick={discard} disabled={sending} data-testid="button-discard-draft"><Trash2 /> Discard</button>
       </div>

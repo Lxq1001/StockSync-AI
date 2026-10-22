@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Check, CircleDollarSign, Package, Pencil, Search, ShoppingCart, Sparkles, Store, X } from 'lucide-react';
+import { Check, CircleDollarSign, Package, Pencil, Search, ShoppingCart, Sparkles, Store, X } from 'lucide-react';
 import { Empty, PageTitle, Stat, money, supplierName, type PageProps } from '@/components/common';
 import { EditItemModal, OrderItemModal } from '@/components/item-modals';
 import { estimatedCover, formatCover, isLowCover, rejectSuggestion, suggestions } from '@/lib/procurement';
@@ -27,7 +27,7 @@ export function InventoryPage({ data, update, toast, startDraft }: PageProps & {
         </tr>)}</tbody></table></div>
         : <Empty title="No suggested tasks" detail="Every item has more than 7 days of cover, or remaining suggestions were rejected." />}
     </section>
-    <div className="stats" style={{ marginTop: 16 }}><Stat label="Tracked items" value={data.skus.length} foot="Across dry, chilled & fresh goods" icon={<Package />} /><Stat label="7 days or less" value={data.skus.filter(isLowCover).length} foot="Estimated cover at risk" icon={<AlertTriangle />} /><Stat label="Est. on-hand value" value={money(data.skus.reduce((s, i) => s + i.onHand * i.unitCost, 0))} foot="Indicative MYR inventory cost" icon={<CircleDollarSign />} /><Stat label="Suppliers" value={data.suppliers.length} foot="Malaysian wholesale partners" icon={<Store />} /></div>
+    <div className="stats" style={{ marginTop: 16 }}><Stat label="Tracked items" value={data.skus.length} foot="Across dry, chilled & fresh goods" icon={<Package />} /><Stat label="Est. on-hand value" value={money(data.skus.reduce((s, i) => s + i.onHand * i.unitCost, 0))} foot="Indicative MYR inventory cost" icon={<CircleDollarSign />} /><Stat label="Suppliers" value={data.suppliers.length} foot="Malaysian wholesale partners" icon={<Store />} /></div>
     <div className="toolbar"><label className="searchbox"><Search /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search stock or category" data-testid="input-inventory-search" /></label><select className="select" value={category} onChange={e => setCategory(e.target.value)} aria-label="Filter category" data-testid="select-inventory-category">{categories.map(c => <option key={c}>{c}</option>)}</select><select className="select" value={sort} onChange={e => setSort(e.target.value)} aria-label="Sort inventory" data-testid="select-inventory-sort"><option value="risk">Sort: depletion risk</option><option value="name">Sort: name A-Z</option></select></div>
     <div className="panel"><div className="table-wrap"><table className="data-table"><thead><tr><th>Item</th><th>On hand</th><th>Average use</th><th>Estimated cover</th><th>Unit cost</th><th>Action</th></tr></thead><tbody>
       {filtered.map(i => { const low = isLowCover(i); return <tr key={i.id} data-testid={`row-inventory-${i.id}`}>
