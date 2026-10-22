@@ -24,7 +24,6 @@ export function Shell({ open, setOpen, children, right }: { open: boolean; setOp
       <nav className="nav-list" aria-label="Main navigation">{navItems.map(({ path: p, label, icon: Icon }) =>
         <Link key={p} href={p} onClick={closeOnMobile} className={`nav-link ${path === p ? 'active' : ''}`} aria-current={path === p ? 'page' : undefined} data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`}><Icon /><span>{label}</span></Link>)}</nav>
       <div className="side-bottom">
-        <div className="demo-flag"><strong>DEMO · SYNTHETIC DATA</strong>Supplier emails are simulated and stored in this browser. No message will be sent.</div>
         <div className="side-user"><div className="user-avatar">AR</div><div><div className="user-label">{MANAGER}</div><div className="user-role">Store manager · demo persona</div></div></div>
       </div>
     </aside>

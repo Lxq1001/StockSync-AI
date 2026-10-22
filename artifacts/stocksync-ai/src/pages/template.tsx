@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Boxes, Info, Pencil, Send, Trash2 } from 'lucide-react';
+import { Boxes, Pencil, Send, Trash2 } from 'lucide-react';
 import { Empty, FormError, PageTitle, money, supplierName, type PageProps } from '@/components/common';
 import { sendDraft, setDraft, validateDraft, type TemplateDraft } from '@/lib/procurement';
 
@@ -39,7 +39,6 @@ export function TemplatePage({ data, update, toast }: PageProps) {
 
   return <main className="content">
     <PageTitle eyebrow="Supplier email · draft saved in this browser" title="Order email" subtitle={`${draft.quantity} ${sku?.unit ?? ''} ${sku?.name ?? 'Unknown item'} from ${supplierName(data, draft.supplierId)} · ${money(draft.quantity * draft.unitCost)}`} />
-    <div className="warning" style={{ marginBottom: 16 }}><Info /><span><b>Demo only: Send does not deliver a real email.</b> It records a simulated send in this browser and creates a purchase order with status Sent.</span></div>
     <section className="mail-window" data-testid="panel-mail">
       <div className="mail-bar"><span className="mail-title">New message</span><span className="pill">{editing ? 'Editing' : 'Read-only'}</span></div>
       {row('to', 'To')}{row('from', 'From')}{row('subject', 'Subject')}
