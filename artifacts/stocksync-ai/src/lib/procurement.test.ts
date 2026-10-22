@@ -1,13 +1,24 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
 import {
-  buildDraft, editItem, initialData, LEGACY_KEY, loadStore, migrateV1, rejectSuggestion, saveStore, sendDraft,
+  buildDraft, buildMailtoUrl, editItem, initialData as emptyData, RETIRED_STORE_KEYS, loadStore, rejectSuggestion, saveStore, sendDraft,
   setDraft, setOrderStatus, STORE_KEY, suggestions, validateItemEdit, type StoreData,
 } from './procurement';
 import { applyImport, parseCsv, parseSalesFile, previewImport, sampleCsv } from './sales-import';
+import { activateProvidedWorkspace, loadProvidedWorkspace, mergeSupplierContacts, providedWorkspace } from './provided-dataset';
+import type { ProvidedDataset } from './provided-dataset';
+
+const fixture = (name: string) => JSON.parse(readFileSync(new URL(`../../../api-server/src/data/${name}`, import.meta.url), 'utf8'));
+const provided: ProvidedDataset = {
+  inventory: fixture('mock_db.json'), suppliers: fixture('suppliers.json'),
+  salesTransactions: fixture('sales_transaction.json'), importData: fixture('import_data.json'),
+};
+const initialData = () => providedWorkspace(provided);
 
 class MemStore { m = new Map<string, string>(); fail = false;
   getItem(k: string) { return this.m.get(k) ?? null; }
+  removeItem(k: string) { this.m.delete(k); }
   setItem(k: string, v: string) { if (this.fail) throw new Error('QuotaExceededError'); this.m.set(k, v); } }
 const roundTrip = (s: MemStore, d: StoreData) => { saveStore(s, d); return loadStore(s).data; };
 
@@ -38,66 +49,151 @@ test('item edit validates blank, negative and non-finite and persists', () => {
   assert.ok('error' in validateItemEdit({ name: 'x', onHand: '1', unitCost: 'Infinity' }));
   assert.ok('error' in validateItemEdit({ name: 'x', onHand: 'abc', unitCost: '1' }));
   const s = new MemStore();
-  const loaded = roundTrip(s, editItem(initialData(), 'sku-002', { name: ' Susu segar ', onHand: '40', unitCost: '6.5' }));
-  const sku = loaded.skus.find(x => x.id === 'sku-002')!;
+  const loaded = roundTrip(s, editItem(initialData(), 'SKU1', { name: ' Susu segar ', onHand: '40', unitCost: '6.5' }));
+  const sku = loaded.skus.find(x => x.id === 'SKU1')!;
   assert.deepEqual([sku.name, sku.onHand, sku.unitCost], ['Susu segar', 40, 6.5]);
 });
 
 test('email closing uses Thank you for new and previously saved drafts', () => {
   const data = initialData();
-  const draft = buildDraft(data, 'sku-002', 30);
+  const draft = buildDraft(data, 'SKU1', 30);
   assert.match(draft.body, /\n\nThank you,\n/);
   const oldDraft = { ...draft, body: draft.body.replace('\n\nThank you,\n', '\n\nTerima kasih,\n') };
   const loaded = roundTrip(new MemStore(), setDraft(data, oldDraft));
   assert.equal(loaded.draft?.body, draft.body);
 });
 
+test('mailto link carries the editable recipient, subject, and complete encoded body', () => {
+  const draft = buildDraft(initialData(), 'SKU1', 30);
+  const url = buildMailtoUrl({ ...draft, to: 'buyer@example.com', subject: 'Order & delivery', body: 'Hello team,\nPlease confirm.' });
+  assert.equal(url, 'mailto:buyer@example.com?subject=Order%20%26%20delivery&body=Hello%20team%2C%0APlease%20confirm.');
+});
+
 test('draft persists, send creates exactly one Sent order and blocks duplicates', () => {
   const s = new MemStore();
-  const withDraft = roundTrip(s, setDraft(initialData(), buildDraft(initialData(), 'sku-002', 30)));
+  const data = initialData();
+  data.suppliers = data.suppliers.map(supplier => ({ ...supplier, email: 'orders@example.test' }));
+  const withDraft = roundTrip(s, setDraft(data, buildDraft(data, 'SKU1', 30)));
   assert.equal(withDraft.draft?.quantity, 30);
-  assert.match(withDraft.draft!.body, /Fresh milk/);
+  assert.match(withDraft.draft!.body, /Fresh Milk/);
   assert.throws(() => sendDraft(withDraft, { ...withDraft.draft!, to: 'not-an-email' }), /recipient/);
   const r = sendDraft(withDraft, withDraft.draft!);
   assert.equal(r.order.status, 'Sent');
-  assert.equal(r.order.totalCost, 216);
+  assert.equal(r.order.totalCost, 225);
   assert.equal(r.data.orders.length, withDraft.orders.length + 1);
   assert.equal(r.data.draft, undefined);
-  assert.match(r.data.audit[0].details, /no real email/);
+  assert.match(r.data.audit[0].details, /user confirmed sent from external mail app/);
+  assert.equal(r.order.send?.note, 'Sent from external mail app; confirmed by user');
   assert.throws(() => sendDraft(r.data, withDraft.draft!), /already sent/);
+});
+
+test('approving items from each supplier fills the assigned contact without creating orders', () => {
+  const data = providedWorkspace(provided);
+  assert.equal(data.skus.length, 15);
+  assert.equal(data.suppliers.length, 3);
+  assert.equal(data.salesTransactions?.length, 42);
+  for (const id of ['SKU1', 'SKU6', 'SKU11']) {
+    const draft = buildDraft(data, id, 2);
+    const expected = provided.suppliers.find(s => s.supplier_id === draft.supplierId)!;
+    assert.equal(draft.to, expected.email);
+    assert.equal(roundTrip(new MemStore(), setDraft(data, draft)).draft?.to, expected.email);
+  }
+  assert.equal(data.orders.length, 0);
+  const missing = { ...data, suppliers: data.suppliers.map(s => ({ ...s, email: undefined })) };
+  assert.equal(buildDraft(missing, 'SKU1', 2).to, '');
+});
+
+test('contact refresh fills missing saved recipients but retains manually edited valid recipients', () => {
+  const data = providedWorkspace(provided);
+  const draft = { ...buildDraft(data, 'SKU1', 2), to: '' };
+  const linked = mergeSupplierContacts(setDraft(data, draft), provided);
+  assert.equal(linked.draft?.to, data.suppliers[0].email);
+  const custom = setDraft(data, { ...draft, to: 'custom@example.test' });
+  assert.equal(mergeSupplierContacts(custom, provided).draft?.to, 'custom@example.test');
+});
+
+test('provided import accepts receipt objects and arrays, preserving stock and duplicate safety', () => {
+  const data = providedWorkspace(provided);
+  const parsed = parseSalesFile('import_data.json', JSON.stringify(provided.importData), data.skus);
+  assert.ok(parsed.ok);
+  if (!parsed.ok) return;
+  assert.equal(parsed.rows.length, 55);
+  const preview = previewImport(data, parsed.rows);
+  const next = applyImport(data, preview, 'Tester');
+  assert.equal(next.skus.find(s => s.id === 'SKU1')?.avgDailyDemand, 1.57);
+  assert.deepEqual(next.skus.map(s => s.onHand), data.skus.map(s => s.onHand));
+  assert.equal(next.salesTransactions?.length, 97);
+  assert.equal(applyImport(next, preview, 'Tester').salesTransactions?.length, 97);
 });
 
 test('status change is tracking only, persists, and never changes stock', () => {
   const s = new MemStore();
-  const d = initialData();
+  const base = initialData(), draft = buildDraft(base, 'SKU1', 2);
+  const d = sendDraft(setDraft(base, draft), draft).data;
+  const id = d.orders[0].id;
   const stock = d.skus.map(x => x.onHand);
-  let n = setOrderStatus(d, 'PO-2406', 'Received');
-  n = setOrderStatus(n, 'PO-2406', 'Pending Delivery');
-  n = setOrderStatus(n, 'PO-2406', 'Received');
+  let n = setOrderStatus(d, id, 'Received');
+  n = setOrderStatus(n, id, 'Pending Delivery');
+  n = setOrderStatus(n, id, 'Received');
   const loaded = roundTrip(s, n);
-  assert.equal(loaded.orders.find(o => o.id === 'PO-2406')!.status, 'Received');
+  assert.equal(loaded.orders.find(o => o.id === id)!.status, 'Received');
   assert.deepEqual(loaded.skus.map(x => x.onHand), stock);
-  assert.throws(() => setOrderStatus(d, 'PO-2406', 'Awaiting approval' as never));
+  assert.throws(() => setOrderStatus(d, id, 'Awaiting approval' as never));
 });
 
-test('v1 anonymous migration keeps tracked orders and sets legacy aside; account keys ignored', () => {
+test('retired browser stores are deleted and no old products, orders, or activity return', () => {
   const s = new MemStore();
-  s.setItem(`${LEGACY_KEY}:user_123`, JSON.stringify({ secret: true }));
-  const v1 = { ...initialData(), version: undefined, orders: [
-    { id: 'A', itemId: 'sku-001', supplierId: 'sup-01', quantity: 1, unitCost: 1, totalCost: 1, status: 'Awaiting approval', createdAt: 'x', depletionDays: 1 },
-    { id: 'B', itemId: 'sku-001', supplierId: 'sup-01', quantity: 1, unitCost: 1, totalCost: 1, status: 'Received', createdAt: 'x', depletionDays: 1 },
-    { id: 'C', itemId: 'sku-001', supplierId: 'sup-01', quantity: 1, unitCost: 1, totalCost: 1, status: 'Rejected', createdAt: 'x', depletionDays: 1 },
-  ] };
-  s.setItem(LEGACY_KEY, JSON.stringify(v1));
-  const { data } = loadStore(s);
-  assert.deepEqual(data.orders.map(o => o.id), ['B']);
-  assert.deepEqual(data.legacyOrders.map(o => o.status), ['Awaiting approval', 'Rejected']);
-  assert.ok(s.getItem(STORE_KEY));
-  assert.equal(s.getItem(LEGACY_KEY), JSON.stringify(v1));
-  assert.equal(migrateV1({ skus: 'bad' }), null);
-  const onlyAccount = new MemStore();
-  onlyAccount.setItem(`${LEGACY_KEY}:user_123`, JSON.stringify({ ...initialData(), skus: [] }));
-  assert.equal(loadStore(onlyAccount).data.skus.length, initialData().skus.length);
+  const old = initialData();
+  old.skus = [{ ...old.skus[0], id: 'retired-product', supplierId: 'retired-supplier' }];
+  old.suppliers = [{ ...old.suppliers[0], id: 'retired-supplier' }];
+  old.orders = [{ id: 'OLD', itemId: 'retired-product', supplierId: 'retired-supplier', quantity: 1, unitCost: 1, totalCost: 1, status: 'Received', createdAt: 'x', depletionDays: 1 }];
+  old.audit = [{ id: 'old-log', timestamp: 'x', actor: 'sample', action: 'Old sample', details: 'Retired product' }];
+  old.draft = { ...buildDraft(initialData(), 'SKU1', 2), itemId: 'retired-product', supplierId: 'retired-supplier' };
+  old.salesTransactions = [{ itemId: 'retired-product', date: '2025-01-01', quantity: 99 }];
+  for (const key of RETIRED_STORE_KEYS) s.setItem(key, JSON.stringify(old));
+  const accountKey = `${RETIRED_STORE_KEYS[0]}:private-account`;
+  s.setItem(accountKey, 'private account data');
+  assert.equal(loadStore(s).data.skus.length, 0); // No old content appears while the API loads.
+  const result = activateProvidedWorkspace(loadStore(s).data, provided, s);
+  assert.equal(result.message, undefined);
+  assert.equal(result.data.skus.length, 15);
+  assert.equal(result.data.suppliers.length, 3);
+  assert.deepEqual(result.data.orders, []);
+  assert.deepEqual(result.data.audit, []);
+  assert.equal(result.data.draft, undefined);
+  assert.equal(result.data.salesTransactions?.length, 42);
+  for (const key of RETIRED_STORE_KEYS) assert.equal(s.getItem(key), null);
+  assert.equal(s.getItem(accountKey), 'private account data');
+  assert.equal(loadStore(s).data.skus.length, 15);
+});
+
+test('cleanup preserves valid new-dataset orders, edits, drafts, imported sales, and reloads', () => {
+  const base = initialData(), draft = buildDraft(base, 'SKU6', 2);
+  const sent = sendDraft(setDraft(base, draft), draft).data;
+  const edited = editItem(setDraft(sent, buildDraft(sent, 'SKU1', 3)), 'SKU1', { name: 'Fresh Milk (1L)', onHand: '77', unitCost: '7.5' });
+  const parsed = parseSalesFile('update.json', JSON.stringify(provided.importData), edited.skus);
+  assert.ok(parsed.ok);
+  if (!parsed.ok) return;
+  const imported = applyImport(edited, previewImport(edited, parsed.rows), 'Tester');
+  const cleaned = loadProvidedWorkspace(imported, provided);
+  assert.deepEqual(cleaned.orders, imported.orders);
+  assert.deepEqual(cleaned.draft, imported.draft);
+  assert.deepEqual(cleaned.audit, imported.audit);
+  assert.equal(cleaned.skus[0].onHand, 77);
+  assert.equal(cleaned.skus[0].avgDailyDemand, 1.57);
+  assert.equal(cleaned.salesTransactions?.length, 97);
+  assert.deepEqual(roundTrip(new MemStore(), cleaned), JSON.parse(JSON.stringify(cleaned)));
+});
+
+test('retired data is not deleted until the cleaned workspace saves successfully', () => {
+  const storage = new MemStore();
+  storage.setItem(RETIRED_STORE_KEYS[1], JSON.stringify(initialData()));
+  storage.fail = true;
+  const result = activateProvidedWorkspace(emptyData(), provided, storage);
+  assert.match(result.message!, /Could not save/);
+  assert.ok(storage.getItem(RETIRED_STORE_KEYS[1]));
+  assert.equal(storage.getItem(STORE_KEY), null);
+  assert.deepEqual(emptyData().skus, []);
 });
 
 test('storage errors are explicit', () => {
@@ -115,13 +211,13 @@ test('CSV parser handles quotes, escaped quotes and CRLF', () => {
 
 test('import validates atomically and recomputes a 7-day window without touching stock', () => {
   const d = initialData();
-  const bad = parseSalesFile('s.csv', 'itemId,date,quantity\nsku-001,2025-04-18,3\nsku-999,2025-04-18,1\nsku-001,2025-02-30,1\nsku-001,2025-04-18,-2\n', d.skus);
+  const bad = parseSalesFile('s.csv', 'itemId,date,quantity\nSKU6,2025-04-18,3\nSKU999,2025-04-18,1\nSKU6,2025-02-30,1\nSKU6,2025-04-18,-2\n', d.skus);
   assert.equal(bad.ok, false);
   if (!bad.ok) assert.equal(bad.errors.length, 3);
   assert.equal(parseSalesFile('s.csv', 'item,date\n', d.skus).ok, false);
   assert.equal(parseSalesFile('.env', 'X=1', d.skus).ok, false);
   assert.equal(parseSalesFile('s.sql', 'select 1', d.skus).ok, false);
-  const good = parseSalesFile('s.csv', '"itemId","date","quantity"\nsku-002,2025-04-18,14\nsku-002,2025-04-12,7\nsku-002,2025-04-01,99\n', d.skus);
+  const good = parseSalesFile('s.csv', '"itemId","date","quantity"\nSKU1,2025-04-18,14\nSKU1,2025-04-12,7\nSKU1,2025-04-01,99\n', d.skus);
   assert.ok(good.ok);
   if (!good.ok) return;
   const p = previewImport(d, good.rows);
@@ -129,11 +225,11 @@ test('import validates atomically and recomputes a 7-day window without touching
   assert.equal(p.outside, 1);
   assert.equal(p.items[0].after, 3);
   const next = applyImport(d, p, 'Aina Rahman');
-  const milk = next.skus.find(s => s.id === 'sku-002')!;
+  const milk = next.skus.find(s => s.id === 'SKU1')!;
   assert.equal(milk.avgDailyDemand, 3);
-  assert.equal(milk.onHand, 9);
-  assert.equal(next.skus.find(s => s.id === 'sku-001')!.avgDailyDemand, 5.2);
-  const json = parseSalesFile('s.json', JSON.stringify([{ itemId: 'sku-001', date: '2025-04-18', quantity: 'x' }]), d.skus);
+  assert.equal(milk.onHand, 10);
+  assert.equal(next.skus.find(s => s.id === 'SKU6')!.avgDailyDemand, 0.14);
+  const json = parseSalesFile('s.json', JSON.stringify([{ itemId: 'SKU6', date: '2025-04-18', quantity: 'x' }]), d.skus);
   assert.equal(json.ok, false);
   assert.ok(parseSalesFile('sample.csv', sampleCsv(d.skus, '2025-04-18'), d.skus).ok);
 });

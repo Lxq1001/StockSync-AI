@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "resolveJsonModule": true,
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo",
     "outDir": "dist",

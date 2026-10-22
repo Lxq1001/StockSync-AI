@@ -9,7 +9,8 @@ import { InventoryPage } from '@/pages/inventory';
 import { OrdersPage } from '@/pages/orders';
 import { TemplatePage } from '@/pages/template';
 import { ActivityPage } from '@/pages/activity';
-import { buildDraft, initialData, loadStore, saveStore, setDraft, type StoreData } from '@/lib/procurement';
+import { buildDraft, loadStore, saveStore, setDraft, type StoreData } from '@/lib/procurement';
+import { activateProvidedWorkspace, mergeSupplierContacts, providedWorkspace, type ProvidedDataset } from '@/lib/provided-dataset';
 
 const storage = (() => { try { return typeof window !== 'undefined' ? window.localStorage : undefined; } catch { return undefined; } })();
 
@@ -19,6 +20,10 @@ function Workspace() {
   const dataRef = useRef(data);
   const [notice, setNotice] = useState(boot.message ?? '');
   const [importing, setImporting] = useState(false);
+  const [dataset, setDataset] = useState<ProvidedDataset | null>(null);
+  const [datasetError, setDatasetError] = useState('');
+  const [datasetAttempt, setDatasetAttempt] = useState(0);
+  const [datasetReady, setDatasetReady] = useState(false);
   const [open, setOpen] = useState(() => typeof window === 'undefined' || !window.matchMedia('(max-width: 680px)').matches);
   const [, navigate] = useLocation();
   useEffect(() => { if (!notice) return; const t = window.setTimeout(() => setNotice(''), 7000); return () => window.clearTimeout(t); }, [notice]);
@@ -27,14 +32,33 @@ function Workspace() {
     try { const next = fn(dataRef.current); if (next === dataRef.current) return true; saveStore(storage, next); dataRef.current = next; setData(next); return true; }
     catch (e) { toast(e instanceof Error ? e.message : 'Could not save this change.'); return false; }
   };
+  useEffect(() => {
+    let cancelled = false;
+    setDatasetError('');
+    fetch('/api/stock-dataset').then(async response => {
+      if (!response.ok) throw new Error('Supplier contacts could not be loaded.');
+      const bundle = await response.json() as ProvidedDataset;
+      if (cancelled) return;
+      const result = activateProvidedWorkspace(dataRef.current, bundle, storage);
+      setDataset(bundle);
+      dataRef.current = result.data; setData(result.data); setDatasetReady(true);
+      if (result.message) toast(result.message);
+    }).catch(error => { if (!cancelled) setDatasetError(error instanceof Error ? error.message : 'Could not load supplier contacts.'); });
+    return () => { cancelled = true; };
+  }, [datasetAttempt]);
   const startDraft = (skuId: string, qty: number) => {
     if (dataRef.current.draft && !window.confirm('Replace the unsent email draft with a new one?')) { navigate('/template'); return; }
-    if (update(d => setDraft(d, buildDraft(d, skuId, qty)))) navigate('/template');
+    if (update(d => {
+      const current = dataset ? mergeSupplierContacts(d, dataset) : d;
+      return setDraft(current, buildDraft(current, skuId, qty));
+    })) navigate('/template');
   };
-  const reset = () => { if (window.confirm('Reset this browser demo? Local edits, orders, drafts and activity will be erased.') && update(() => initialData())) toast('Demo data restored to the original sample.'); };
+  const reset = () => { if (dataset && window.confirm('Restore only the supplied datasets? Local edits, orders, drafts and activity will be erased.') && update(() => providedWorkspace(dataset))) toast('Supplied datasets restored.'); };
   const props = { data, update, toast };
-  return <Shell open={open} setOpen={setOpen} right={<button className="store-chip" onClick={reset} data-testid="button-reset-demo"><span className="online-dot" /> Local workspace <RotateCcw size={12} /></button>}>
-    <Switch>
+  return <Shell open={open} setOpen={setOpen} right={<button className="store-chip" onClick={reset} disabled={!datasetReady} data-testid="button-reset-demo"><span className="online-dot" /> Local workspace <RotateCcw size={12} /></button>}>
+    {datasetError && <div className="form-error" role="alert" style={{ margin: '16px 40px' }}>{datasetError} <button className="button small" onClick={() => setDatasetAttempt(n => n + 1)}>Retry</button></div>}
+    {!datasetReady && !datasetError && <main className="content" role="status">Loading supplied datasets…</main>}
+    {datasetReady && <Switch>
       <Route path="/"><OverviewPage {...props} onImport={() => setImporting(true)} /></Route>
       <Route path="/user-portal"><Redirect to="/" replace /></Route>
       <Route path="/inventory"><InventoryPage {...props} startDraft={startDraft} /></Route>
@@ -42,8 +66,8 @@ function Workspace() {
       <Route path="/template"><TemplatePage {...props} /></Route>
       <Route path="/activity"><ActivityPage data={data} /></Route>
       <Route><main className="content"><PageTitle eyebrow="Page not found" title="This view is not in the workspace" subtitle="Use the navigation to return to stock, orders or the activity log." /><Link href="/" className="button primary" data-testid="link-back-overview">Back to overview</Link></main></Route>
-    </Switch>
-    {importing && <ImportModal {...props} onClose={() => setImporting(false)} />}
+    </Switch>}
+    {importing && <ImportModal {...props} providedImportData={dataset?.importData} onClose={() => setImporting(false)} />}
     {notice && <div className="toast" role="status" data-testid="status-toast">{notice}</div>}
   </Shell>;
 }

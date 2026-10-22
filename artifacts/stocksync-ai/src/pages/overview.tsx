@@ -1,11 +1,10 @@
 import { Link } from 'wouter';
-import { ArrowUpRight, Boxes, ClipboardList, FileUp, Send, Truck } from 'lucide-react';
-import { PageTitle, Stat, type PageProps } from '@/components/common';
+import { ArrowUpRight, Boxes, ClipboardList, FileUp, Send } from 'lucide-react';
+import { PageTitle, type PageProps } from '@/components/common';
 import { estimatedCover, isLowCover, MANAGER, suggestions } from '@/lib/procurement';
 
 export function OverviewPage({ data, onImport }: PageProps & { onImport: () => void }) {
   const tasks = suggestions(data), atRisk = data.skus.filter(isLowCover).sort((a, b) => estimatedCover(a) - estimatedCover(b));
-  const inMotion = data.orders.filter(o => o.status !== 'Received');
   return <main className="content">
     <PageTitle title={`Good morning, ${MANAGER.split(' ')[0]}`}
       right={<button className="button primary" onClick={onImport} data-testid="button-import"><FileUp /> Import</button>} />

@@ -8,7 +8,7 @@ export type Supplier = { id: string; name: string; contactMethod: string; MOQ: n
 /** Tracked purchase-order statuses. Status changes are tracking only and never change stock. */
 export const ORDER_STATUSES = ['Sent', 'Pending Delivery', 'Received'] as const;
 export type OrderStatus = typeof ORDER_STATUSES[number];
-export type SimulatedSend = { to: string; from: string; subject: string; body: string; recordedAt: string; note: 'Demo only - no real email sent' };
+export type SimulatedSend = { to: string; from: string; subject: string; body: string; recordedAt: string; note: 'Demo only - no real email sent' | 'Sent from external mail app; confirmed by user' };
 export type PurchaseOrder = {
   id: string; itemId: string; supplierId: string; quantity: number; unitCost: number;
   totalCost: number; status: OrderStatus; createdAt: string; depletionDays: number;
@@ -25,14 +25,15 @@ export type StoreData = {
   version: 2;
   skus: SKU[]; suppliers: Supplier[]; orders: PurchaseOrder[]; audit: AuditEntry[];
   budgetCap: number; rejectedSuggestions: string[]; legacyOrders: LegacyOrder[];
+  salesTransactions?: import('./sales-import').SalesRow[];
   draft?: TemplateDraft; lastImport?: { importedAt: string; rows: number; windowStart: string; windowEnd: string };
 };
 
 export const MANAGER = 'Aina Rahman';
 export const MANAGER_EMAIL = 'aina.rahman@stocksync-demo.example';
 export const COVER_ALERT_DAYS = 7;
-export const STORE_KEY = 'stocksync-demo-v2';
-export const LEGACY_KEY = 'stocksync-demo-v1';
+export const STORE_KEY = 'stocksync-datasets-v1';
+export const RETIRED_STORE_KEYS = ['stocksync-demo-v1', 'stocksync-demo-v2'] as const;
 
 export const formatMoney = (value: number) =>
   `RM ${value.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -41,31 +42,8 @@ const uid = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.ra
 
 export const initialData = (): StoreData => ({
   version: 2,
-  skus: [
-    { id: 'sku-001', name: 'Jasmine rice', category: 'Dry goods', onHand: 18, unit: 'kg', avgDailyDemand: 5.2, leadTimeDays: 2, reorderBuffer: 2, supplierId: 'sup-01', unitCost: 4.8, recentSales: [4, 5, 6, 5, 4, 6, 6], batchSize: 25 },
-    { id: 'sku-002', name: 'Fresh milk', category: 'Chilled', onHand: 9, unit: 'L', avgDailyDemand: 8.4, leadTimeDays: 1, reorderBuffer: 1, supplierId: 'sup-02', unitCost: 7.2, recentSales: [8, 9, 7, 9, 8, 10, 8], batchSize: 30 },
-    { id: 'sku-003', name: 'Chicken breast', category: 'Fresh protein', onHand: 14, unit: 'kg', avgDailyDemand: 6.1, leadTimeDays: 1, reorderBuffer: 2, supplierId: 'sup-02', unitCost: 18.9, recentSales: [5, 6, 7, 5, 6, 7, 6], batchSize: 20 },
-    { id: 'sku-004', name: 'Cooking oil', category: 'Dry goods', onHand: 31, unit: 'L', avgDailyDemand: 3.1, leadTimeDays: 3, reorderBuffer: 3, supplierId: 'sup-03', unitCost: 8.5, recentSales: [3, 4, 3, 3, 2, 4, 3], batchSize: 24 },
-    { id: 'sku-005', name: 'Kopi beans, medium roast', category: 'Beverage', onHand: 4.5, unit: 'kg', avgDailyDemand: 1.4, leadTimeDays: 4, reorderBuffer: 1, supplierId: 'sup-04', unitCost: 42, recentSales: [1, 2, 1, 1, 2, 1, 2], batchSize: 12 },
-    { id: 'sku-006', name: 'Brown sugar', category: 'Dry goods', onHand: 12, unit: 'kg', avgDailyDemand: 1.8, leadTimeDays: 2, reorderBuffer: 2, supplierId: 'sup-01', unitCost: 5.6, recentSales: [2, 2, 1, 2, 2, 1, 2], batchSize: 20 },
-    { id: 'sku-007', name: 'Eggs, grade A', category: 'Fresh protein', onHand: 42, unit: 'tray', avgDailyDemand: 7.2, leadTimeDays: 1, reorderBuffer: 3, supplierId: 'sup-03', unitCost: 13.5, recentSales: [7, 8, 6, 8, 7, 8, 7], batchSize: 30 },
-    { id: 'sku-008', name: 'Oat milk', category: 'Chilled', onHand: 16, unit: 'carton', avgDailyDemand: 2.3, leadTimeDays: 2, reorderBuffer: 2, supplierId: 'sup-02', unitCost: 11.9, recentSales: [2, 3, 2, 2, 3, 2, 2], batchSize: 18 },
-  ],
-  suppliers: [
-    { id: 'sup-01', name: 'Sinar Pantry Supply', contactMethod: 'Email', MOQ: 10, leadTimeDays: 2 },
-    { id: 'sup-02', name: 'Pasar Segar Wholesale', contactMethod: 'Email', MOQ: 6, leadTimeDays: 1 },
-    { id: 'sup-03', name: 'Kedai Mart Trading', contactMethod: 'Email', MOQ: 12, leadTimeDays: 2 },
-    { id: 'sup-04', name: 'Bukit Roast Cooperative', contactMethod: 'Email', MOQ: 4, leadTimeDays: 4 },
-  ],
-  orders: [
-    { id: 'PO-2406', itemId: 'sku-001', supplierId: 'sup-01', quantity: 24, unitCost: 4.8, totalCost: 115.2, status: 'Pending Delivery', createdAt: '2025-04-17T14:20:00', depletionDays: 3.4, approvedBy: 'Sample manager' },
-    { id: 'PO-2405', itemId: 'sku-003', supplierId: 'sup-02', quantity: 12, unitCost: 18.9, totalCost: 226.8, status: 'Received', createdAt: '2025-04-16T11:10:00', depletionDays: 2.3, approvedBy: 'Sample manager' },
-  ],
-  audit: [
-    { id: 'log-3', timestamp: '2025-04-17T14:20:00', actor: 'Sample manager', action: 'Approved order', details: 'PO-2406 · 24 kg Jasmine rice · RM 115.20 · Pending Delivery' },
-    { id: 'log-4', timestamp: '2025-04-16T11:10:00', actor: 'Sample manager', action: 'Marked received', details: 'PO-2405 · 12 kg Chicken breast · received at store' },
-  ],
-  budgetCap: 500, rejectedSuggestions: [], legacyOrders: [],
+  skus: [], suppliers: [], orders: [], audit: [],
+  budgetCap: 500, rejectedSuggestions: [], legacyOrders: [], salesTransactions: [],
 });
 
 /** Days of stock at current average use. Zero demand means no depletion risk. */
@@ -126,7 +104,7 @@ export function editItem(data: StoreData, skuId: string, input: ItemEdit): Store
   };
 }
 
-export const supplierEmail = (s: Supplier) => s.email ?? `orders@${s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.example`;
+export const supplierEmail = (s: Supplier) => s.email?.trim() ?? '';
 
 export function buildDraft(data: StoreData, skuId: string, quantity: number): TemplateDraft {
   const sku = data.skus.find(s => s.id === skuId);
@@ -155,7 +133,11 @@ export function validateDraft(d: Pick<TemplateDraft, 'to' | 'from' | 'subject' |
   if (d.body.length > 5000) return 'Content must be 5,000 characters or fewer.';
   return null;
 }
-/** Records a simulated send and creates one Sent purchase order. Throws if there is no draft (prevents duplicates). */
+/** Builds a prefilled email-app handoff; the app cannot verify whether the user sends it. */
+export function buildMailtoUrl(draft: Pick<TemplateDraft, 'to' | 'subject' | 'body'>): string {
+  return `mailto:${draft.to.trim()}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`;
+}
+/** Records a user-confirmed external send and creates one Sent purchase order. Throws if there is no draft (prevents duplicates). */
 export function sendDraft(data: StoreData, edited: Pick<TemplateDraft, 'to' | 'from' | 'subject' | 'body'>, now = new Date().toISOString()): { data: StoreData; order: PurchaseOrder } {
   const draft = data.draft;
   if (!draft) throw new Error('This draft was already sent or cleared. No new order was created.');
@@ -169,14 +151,14 @@ export function sendDraft(data: StoreData, edited: Pick<TemplateDraft, 'to' | 'f
     id, itemId: draft.itemId, supplierId: draft.supplierId, quantity: draft.quantity, unitCost: draft.unitCost,
     totalCost: round2(draft.quantity * draft.unitCost), status: 'Sent', createdAt: now,
     depletionDays: Number.isFinite(estimatedCover(sku)) ? round2(estimatedCover(sku)) : 0, approvedBy: MANAGER,
-    send: { to: edited.to.trim(), from: edited.from.trim(), subject: edited.subject.trim(), body: edited.body, recordedAt: now, note: 'Demo only - no real email sent' },
+    send: { to: edited.to.trim(), from: 'Not captured (external mail app)', subject: edited.subject.trim(), body: edited.body, recordedAt: now, note: 'Sent from external mail app; confirmed by user' },
   };
   return {
     order,
     data: {
       ...data, draft: undefined, orders: [order, ...data.orders],
       rejectedSuggestions: data.rejectedSuggestions,
-      audit: [log('Simulated email send', `${id} · ${draft.quantity} ${sku.unit} ${sku.name} · ${formatMoney(order.totalCost)} · to ${order.send!.to} · demo only, no real email sent · status Sent`, id), ...data.audit],
+      audit: [log('Email marked as sent', `${id} · ${draft.quantity} ${sku.unit} ${sku.name} · ${formatMoney(order.totalCost)} · to ${order.send!.to} · user confirmed sent from external mail app · status Sent`, id), ...data.audit],
     },
   };
 }
@@ -200,26 +182,6 @@ const validSupplier = (s: unknown): s is Supplier => isObj(s) && str(s.id) && st
 const validOrderBase = (o: unknown): o is LegacyOrder => isObj(o) && str(o.id) && str(o.itemId) && str(o.supplierId) && num(o.quantity) && num(o.unitCost) && num(o.totalCost) && str(o.status) && str(o.createdAt);
 const validAudit = (a: unknown): a is AuditEntry => isObj(a) && str(a.id) && str(a.timestamp) && str(a.actor) && str(a.action) && str(a.details);
 
-/** Migrates the anonymous v1 workspace. Legacy Awaiting approval / Rejected entries are kept aside, never relabelled Sent. */
-export function migrateV1(raw: unknown): StoreData | null {
-  if (!isObj(raw)) return null;
-  const { skus, suppliers, orders, audit, budgetCap } = raw;
-  if (!Array.isArray(skus) || !Array.isArray(suppliers) || !Array.isArray(orders) || !Array.isArray(audit)) return null;
-  if (!skus.every(validSku) || !suppliers.every(validSupplier) || !orders.every(validOrderBase) || !audit.every(validAudit)) return null;
-  const tracked: PurchaseOrder[] = [], legacy: LegacyOrder[] = [];
-  for (const o of orders) {
-    const base = { id: o.id, itemId: o.itemId, supplierId: o.supplierId, quantity: o.quantity, unitCost: o.unitCost, totalCost: o.totalCost, createdAt: o.createdAt };
-    if (o.status === 'Pending Delivery' || o.status === 'Received') {
-      const r = o as unknown as Record<string, unknown>;
-      tracked.push({ ...base, status: o.status, depletionDays: num(r.depletionDays) ? (r.depletionDays as number) : 0, ...(str(r.approvedBy) ? { approvedBy: r.approvedBy as string } : {}) });
-    } else legacy.push({ ...base, status: o.status });
-  }
-  return {
-    version: 2, skus: skus.map(s => ({ ...s })), suppliers: suppliers.map(s => ({ ...s })), orders: tracked,
-    audit: audit.map(a => ({ id: a.id, timestamp: a.timestamp, actor: a.actor, action: a.action, details: a.details, ...(a.orderId ? { orderId: a.orderId } : {}), ...(a.reference ? { reference: a.reference } : {}) })),
-    budgetCap: num(budgetCap) ? (budgetCap as number) : 500, rejectedSuggestions: [], legacyOrders: legacy,
-  };
-}
 export function validV2(raw: unknown): raw is StoreData {
   if (!isObj(raw) || raw.version !== 2) return false;
   const r = raw as Record<string, unknown>;
@@ -229,8 +191,8 @@ export function validV2(raw: unknown): raw is StoreData {
 }
 
 /**
- * Loads only the anonymous keys (v2, then v1 migration). User-ID-keyed account data
- * (stocksync-demo-v1:<userId>) from the removed sign-in is never read and is left untouched.
+ * Loads only the dataset-only workspace. The retired sample stores are never
+ * rendered or migrated here. Account-specific keys are never read.
  */
 export function loadStore(storage: KV | undefined): { data: StoreData; message?: string } {
   if (!storage) return { data: initialData(), message: 'Browser storage is unavailable. Changes will not be saved after reload.' };
@@ -247,16 +209,11 @@ export function loadStore(storage: KV | undefined): { data: StoreData; message?:
         }
         return { data: parsed };
       }
-      return { data: initialData(), message: 'Saved demo data was unreadable, so the original sample was loaded. It will be replaced on your next change.' };
-    }
-    const v1 = storage.getItem(LEGACY_KEY);
-    if (v1) {
-      const migrated = migrateV1(JSON.parse(v1));
-      if (migrated) { storage.setItem(STORE_KEY, JSON.stringify(migrated)); return { data: migrated, message: 'Your earlier local demo workspace was carried over.' }; }
+      return { data: initialData(), message: 'Saved workspace was unreadable. Loading only the supplied datasets.' };
     }
     return { data: initialData() };
   } catch (e) {
-    return { data: initialData(), message: `Could not read saved demo data (${e instanceof Error ? e.message : 'storage error'}). The original sample was loaded.` };
+    return { data: initialData(), message: `Could not read saved workspace (${e instanceof Error ? e.message : 'storage error'}). Loading only the supplied datasets.` };
   }
 }
 export function saveStore(storage: KV | undefined, data: StoreData) {

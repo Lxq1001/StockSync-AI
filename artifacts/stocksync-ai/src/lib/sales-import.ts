@@ -46,7 +46,20 @@ export function parseSalesFile(name: string, text: string, skus: SKU[]): ImportR
     if (lower.endsWith('.json')) {
       const data = JSON.parse(text);
       if (!Array.isArray(data)) return { ok: false, errors: ['JSON must be an array of { itemId, date, quantity } objects.'] };
-      raw = data.map((r, i) => ({ line: i + 1, itemId: r?.itemId, date: r?.date, quantity: r?.quantity }));
+      const seen = new Set<string>();
+      raw = data.flatMap((r, i) => {
+        if (r && typeof r === 'object' && 'items' in r) {
+          const date = normalizeReceiptDate(r.orderDate);
+          if (typeof r.sales_id !== 'string' || !r.sales_id.trim()) throw new Error(`Entry ${i + 1}: missing sales_id.`);
+          const key = `${date}:${r.sales_id}`;
+          if (seen.has(key)) throw new Error(`Entry ${i + 1}: duplicate receipt on the same date.`);
+          seen.add(key);
+          const items = Array.isArray(r.items) ? r.items : [r.items];
+          if (!items.length) throw new Error(`Entry ${i + 1}: items cannot be empty.`);
+          return items.map((item: { id?: unknown; quantity?: unknown } | null) => ({ line: i + 1, itemId: item?.id, date, quantity: item?.quantity }));
+        }
+        return [{ line: i + 1, itemId: r?.itemId, date: r?.date, quantity: r?.quantity }];
+      });
     } else if (lower.endsWith('.csv')) {
       const rows = parseCsv(text.replace(/^\uFEFF/, ''));
       if (!rows.length) return { ok: false, errors: ['The file is empty.'] };
@@ -74,7 +87,14 @@ export function parseSalesFile(name: string, text: string, skus: SKU[]): ImportR
 
 const shift = (date: string, days: number) => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
 
-export type ImportPreview = { windowStart: string; windowEnd: string; items: { id: string; name: string; before: number; after: number; recentSales: number[] }[]; rows: number; outside: number };
+function normalizeReceiptDate(value: unknown): unknown {
+  if (typeof value !== 'string' || validDate(value)) return value;
+  const match = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2}) (\d{4})$/.exec(value);
+  if (!match) return value;
+  const month = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(match[1]) + 1;
+  return `${match[3]}-${String(month).padStart(2, '0')}-${match[2].padStart(2, '0')}`;
+}
+export type ImportPreview = { windowStart: string; windowEnd: string; items: { id: string; name: string; before: number; after: number; recentSales: number[] }[]; rows: number; outside: number; salesRows: SalesRow[] };
 /**
  * The 7-day window ends on the latest date in the file. Each item that appears in the file gets
  * recentSales = daily totals over those 7 days (missing days = 0) and avgDailyDemand = total / 7.
@@ -92,13 +112,15 @@ export function previewImport(data: StoreData, rows: SalesRow[]): ImportPreview 
     const sku = data.skus.find(s => s.id === id)!; const recentSales = totals.get(id)!.map(n => Math.round(n * 100) / 100);
     return { id, name: sku.name, before: sku.avgDailyDemand, after: Math.round(recentSales.reduce((a, b) => a + b, 0) / DEMAND_WINDOW_DAYS * 100) / 100, recentSales };
   });
-  return { windowStart, windowEnd, items, rows: rows.length, outside };
+  return { windowStart, windowEnd, items, rows: rows.length, outside, salesRows: rows };
 }
 export function applyImport(data: StoreData, preview: ImportPreview, actor: string): StoreData {
   const byId = new Map(preview.items.map(i => [i.id, i]));
+  const incomingDays = new Set(preview.salesRows.map(r => `${r.itemId}:${r.date}`));
   return {
     ...data,
     skus: data.skus.map(s => { const p = byId.get(s.id); return p ? { ...s, avgDailyDemand: p.after, recentSales: p.recentSales } : s; }),
+    salesTransactions: [...(data.salesTransactions ?? []).filter(r => typeof r.itemId === 'string' && !incomingDays.has(`${r.itemId}:${r.date}`)), ...preview.salesRows],
     lastImport: { importedAt: new Date().toISOString(), rows: preview.rows, windowStart: preview.windowStart, windowEnd: preview.windowEnd },
     audit: [{ id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()), timestamp: new Date().toISOString(), actor, action: 'Imported sales', details: `${preview.rows} rows · ${preview.items.length} items · demand window ${preview.windowStart} to ${preview.windowEnd} · stock on hand unchanged` }, ...data.audit],
   };

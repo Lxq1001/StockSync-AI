@@ -4,7 +4,7 @@ import { Modal, type PageProps } from '@/components/common';
 import { MANAGER } from '@/lib/procurement';
 import { applyImport, IMPORT_MAX_BYTES, parseSalesFile, previewImport, sampleCsv, type ImportPreview } from '@/lib/sales-import';
 
-export function ImportModal({ data, update, toast, onClose }: PageProps & { onClose: () => void }) {
+export function ImportModal({ data, update, toast, onClose, providedImportData }: PageProps & { onClose: () => void; providedImportData?: unknown[] }) {
   const [errors, setErrors] = useState<string[]>([]);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [fileName, setFileName] = useState('');
@@ -35,14 +35,19 @@ export function ImportModal({ data, update, toast, onClose }: PageProps & { onCl
   };
 
   return <Modal title="Import sales transactions" copy="Recalculates recent daily demand from a local file. " onClose={onClose} testId="modal-import" wide
-    footer={<><button className="button" onClick={onClose} data-testid="button-cancel-import">Cancel</button><button className="button primary" disabled={!preview} onClick={apply} data-testid="button-apply-import">Apply import</button></>}>
+    footer={<><button className="button" onClick={onClose} data-testid="button-cancel-import">Cancel</button><button className="button primary" disabled={!preview || busy} onClick={apply} data-testid="button-apply-import">Apply import</button></>}>
     <div className="format-box" data-testid="text-import-formats">
       <b>Accepted formats only</b>
       <div><span className="mono">CSV</span> with header <code>itemId,date,quantity</code> (quoted fields allowed)</div>
-      <div><span className="mono">JSON</span> array of <code>{'{ "itemId": "sku-002", "date": "2025-04-18", "quantity": 9 }'}</code></div>
+      <div><span className="mono">JSON</span> array of <code>{'{ "itemId": "SKU2", "date": "2026-10-12", "quantity": 9 }'}</code>, or receipts with <code>sales_id</code>, <code>orderDate</code>, and <code>items</code> (an object or list).</div>
       <div className="item-detail">Dates as YYYY-MM-DD, quantity 0 or more, itemId must match an inventory item. Max {IMPORT_MAX_BYTES / 1024} KB. This is not a database connection; SQL dumps and other formats are not supported. If any row is invalid, nothing is imported.</div>
       <div className="item-detail">Known item IDs: {data.skus.map(s => s.id).join(', ')}</div>
       <button type="button" className="inline-link link-button" onClick={download} data-testid="button-download-sample"><Download size={13} /> Download sample CSV</button>
+      {providedImportData && <div style={{ marginTop: 12 }}><button className="button" disabled={busy} data-testid="button-use-provided-import" onClick={() => {
+        setErrors([]); setPreview(null); setFileName('import_data.json');
+        const result = parseSalesFile('import_data.json', JSON.stringify(providedImportData), data.skus);
+        if (result.ok) setPreview(previewImport(data, result.rows)); else setErrors(result.errors);
+      }}>Preview provided sales update ({providedImportData.length} transactions)</button></div>}
     </div>
     <label className="file-drop" data-testid="label-import-file">
       <FileUp size={18} /><span>{fileName || 'Choose a .csv or .json file'}</span>

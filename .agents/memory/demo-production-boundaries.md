@@ -3,8 +3,8 @@ name: Demo and production boundaries
 description: How to interpret the procurement brief's supplier-send and immutable Orbyte audit requirements without overstating the portable demo.
 ---
 
-Keep simulation and production guarantees explicit: a local mock outbox receipt is not supplier delivery, and browser-stored activity is not an immutable Orbyte record.
+Keep external email handoff and production guarantees explicit: opening a prefilled mailto draft is not delivery, and a browser-local “sent” status records only the user's confirmation, not verified delivery. Browser-stored activity is not an immutable Orbyte record.
 
-**Why:** The user's brief describes automated supplier contact and an immutable Orbyte activity log, but no Orbyte or live messaging service has been connected. The user also distributes source through GitHub and runs it locally in VS Code, so the demo must remain runnable without hidden hosted dependencies.
+**Why:** The user chose a mail-app handoff rather than Gmail API/OAuth: the browser opens a prefilled draft, the user sends it externally, then confirms in the app. There is still no connected Orbyte audit service or delivery verification. The user also distributes source through GitHub and runs it locally in VS Code, so the demo must remain runnable without hidden hosted dependencies.
 
-**How to apply:** Preserve clear mock labels until a provider and server-backed authorization/audit design are deliberately introduced. Never silently convert a demo receipt to a claimed real send, or call local read-only UI records immutable. When features change, keep the standalone source export compatible with local setup.
+**How to apply:** For the mailto flow, label the action as opening the user's email app and create a Sent purchase-order record only after explicit user confirmation. Never claim delivery was verified. Preserve clear mock labels on purely local sends, and never call browser-local activity immutable. Keep the standalone source export compatible with local setup.

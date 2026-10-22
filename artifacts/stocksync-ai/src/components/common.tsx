@@ -14,8 +14,8 @@ export const supplierName = (d: StoreData, id: string) => d.suppliers.find(x => 
 export function PageTitle({ eyebrow, title, subtitle, right }: { eyebrow?: string; title: string; subtitle?: string; right?: ReactNode }) {
   return <div className="page-heading"><div>{eyebrow && <div className="eyebrow">{eyebrow}</div>}<h1>{title}</h1>{subtitle && <p className="subtitle">{subtitle}</p>}</div>{right}</div>;
 }
-export function Stat({ label, value, foot, icon }: { label: string; value: number | string; foot: string; icon: ReactNode }) {
-  return <div className="stat"><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="stat-label">{label}</span><span style={{ color: '#638277' }}>{icon}</span></div><div className="stat-value">{value}</div><div className="stat-foot">{foot}</div></div>;
+export function Stat({ label, value, foot, icon }: { label: string; value: number | string; foot?: string; icon: ReactNode }) {
+  return <div className="stat"><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="stat-label">{label}</span><span style={{ color: '#638277' }}>{icon}</span></div><div className="stat-value">{value}</div>{foot && <div className="stat-foot">{foot}</div>}</div>;
 }
 export function Empty({ title, detail, children }: { title: string; detail: string; children?: ReactNode }) {
   return <div className="blank"><div className="blank-mark"><Package /></div><b style={{ display: 'block', color: '#35584e', marginBottom: 5 }}>{title}</b>{detail}{children && <div style={{ marginTop: 14 }}>{children}</div>}</div>;
