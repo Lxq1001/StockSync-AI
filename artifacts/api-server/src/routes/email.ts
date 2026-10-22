@@ -38,6 +38,30 @@ function configuredRecipients(): Record<string, string> | null {
   }
 }
 
+function recipientConfigStatus() {
+  const raw = process.env.STOCKSYNC_SUPPLIER_RECIPIENTS_JSON;
+  if (!raw) return { status: "missing", configuredSupplierCount: 0, validAddressCount: 0 };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { status: "invalid_json", configuredSupplierCount: 0, validAddressCount: 0 };
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { status: "invalid_shape", configuredSupplierCount: 0, validAddressCount: 0 };
+  }
+  const entries = Object.entries(parsed);
+  const configuredSupplierCount = entries.filter(([id]) => supplierIds.has(id)).length;
+  const validAddressCount = entries.filter(([id, address]) =>
+    supplierIds.has(id) && typeof address === "string" && emailPattern.test(address.trim()),
+  ).length;
+  return {
+    status: validAddressCount === supplierIds.size ? "ready" : "incomplete_or_invalid",
+    configuredSupplierCount,
+    validAddressCount,
+  };
+}
+
 function sameOrigin(req: Request): boolean {
   const origin = req.get("origin");
   if (!origin) return false;
@@ -88,6 +112,10 @@ router.get("/email/config", (_req, res) => {
     recipients: recipients || {},
     message: recipients ? undefined : "Supplier email settings are not configured on the server.",
   });
+});
+
+router.get("/email/config-status", (_req, res) => {
+  res.json(recipientConfigStatus());
 });
 
 router.post("/email/send-test", async (req, res) => {
