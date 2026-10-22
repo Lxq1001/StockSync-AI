@@ -1,11 +1,19 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
 import {
-  buildDraft, buildTestEmail, editItem, initialData, LEGACY_KEY, loadStore, migrateV1, recordTestEmail, rejectSuggestion, saveStore, sendDraft,
+  buildDraft, buildTestEmail, editItem, initialData as createInitialData, loadProvidedDataset, LEGACY_KEY, loadStore, migrateV1, recordTestEmail, rejectSuggestion, saveStore, sendDraft,
   setDraft, setOrderStatus, STORE_KEY, suggestions, validateItemEdit, type StoreData,
 } from './procurement';
 import { applyImport, parseCsv, parseSalesFile, previewImport, sampleCsv } from './sales-import';
-import { mockSalesTransactions } from '../data/mockDataset';
+import type { DatasetBundle } from './dataset';
+
+const fixture = (name: string) => JSON.parse(readFileSync(new URL(`../../../api-server/src/data/${name}`, import.meta.url), 'utf8'));
+const dataset: DatasetBundle = {
+  inventory: fixture('mock_db.json'), suppliers: fixture('suppliers.json'),
+  salesTransactions: fixture('sales_transaction.json'), importData: fixture('import_data.json'),
+};
+const initialData = () => createInitialData(dataset);
 
 class MemStore { m = new Map<string, string>(); fail = false;
   getItem(k: string) { return this.m.get(k) ?? null; }
@@ -16,15 +24,19 @@ const testData = () => {
   return { ...data, suppliers: data.suppliers.map(s => ({ ...s, email: `${s.id.toLowerCase()}@example.test` })) };
 };
 
-test('synthetic dataset maps all 15 catalog items and transaction rows to their supplier', () => {
+test('provided dataset maps 15 products, 3 suppliers, and 21 receipts to seven-day demand', () => {
   const data = initialData();
   assert.equal(data.skus.length, 15);
   assert.equal(data.suppliers.length, 3);
-  assert.equal(data.salesTransactions?.length, mockSalesTransactions.length);
-  assert.ok(mockSalesTransactions.length > 150);
-  assert.ok(mockSalesTransactions.every(row => row.is_dummy && data.skus.some(s => s.id === row.item_id)));
+  assert.equal(data.salesTransactions?.length, 42);
+  assert.equal(data.lastImport?.transactions, 21);
+  assert.equal(data.lastImport?.windowStart, '2026-10-05');
+  assert.equal(data.lastImport?.windowEnd, '2026-10-11');
   assert.ok(data.skus.every(s => data.suppliers.some(v => v.id === s.supplierId)));
-  assert.ok(data.skus.every(s => s.recentSales.length === 14 && s.avgDailyDemand > 0));
+  assert.ok(data.skus.every(s => s.recentSales.length === 7));
+  assert.equal(data.skus.find(s => s.id === 'SKU1')!.avgDailyDemand, 2.71);
+  assert.equal(data.skus.find(s => s.id === 'SKU14')!.avgDailyDemand, 0);
+  assert.equal(data.skus.find(s => s.id === 'SKU14')!.onHand, 11);
 });
 
 test('suggestions include only items with cover <= 7 days', () => {
@@ -133,7 +145,57 @@ test('v1 anonymous migration keeps tracked orders and sets legacy aside; account
   assert.equal(migrateV1({ skus: 'bad' }), null);
   const onlyAccount = new MemStore();
   onlyAccount.setItem(`${LEGACY_KEY}:user_123`, JSON.stringify({ ...initialData(), skus: [] }));
-  assert.equal(loadStore(onlyAccount).data.skus.length, initialData().skus.length);
+  assert.equal(loadStore(onlyAccount).data.skus.length, 0); // The API hydrates a fresh anonymous workspace.
+});
+
+test('provided second-week receipts support item objects and lists, with idempotent reimport', () => {
+  const data = initialData();
+  const result = parseSalesFile('import_data.json', JSON.stringify(dataset.importData), data.skus);
+  assert.ok(result.ok);
+  if (!result.ok) return;
+  assert.equal(result.rows.length, 55);
+  const preview = previewImport(data, result.rows);
+  assert.equal(preview.transactions, 33);
+  assert.equal(preview.windowStart, '2026-10-12');
+  assert.equal(preview.windowEnd, '2026-10-18');
+  const next = applyImport(data, preview, 'Test');
+  assert.equal(next.skus.find(s => s.id === 'SKU1')!.avgDailyDemand, 1.57);
+  assert.equal(next.skus.find(s => s.id === 'SKU7')!.avgDailyDemand, 2);
+  assert.equal(next.skus.find(s => s.id === 'SKU14')!.avgDailyDemand, 0.29);
+  assert.deepEqual(next.skus.map(s => s.onHand), data.skus.map(s => s.onHand));
+  assert.equal(next.salesTransactions?.length, 97);
+  const repeated = applyImport(next, previewImport(next, result.rows), 'Test');
+  assert.equal(repeated.salesTransactions?.length, 97);
+  assert.deepEqual(repeated.skus, next.skus);
+  assert.equal(roundTrip(new MemStore(), repeated).lastImport?.transactions, 33);
+});
+
+test('dataset loading is explicit and retains orders, draft, activity, and budget', () => {
+  const data = testData();
+  const draft = buildDraft(data, 'SKU6', 2);
+  const sent = sendDraft(setDraft(data, draft), draft).data;
+  const withEdits = setDraft({ ...sent, budgetCap: 750, skus: sent.skus.map(s => ({ ...s, onHand: 999 })) }, draft);
+  const store = new MemStore();
+  saveStore(store, withEdits);
+  assert.equal(loadStore(store).data.skus[0].onHand, 999);
+  const next = loadProvidedDataset(withEdits, dataset);
+  assert.deepEqual(next.orders, withEdits.orders);
+  assert.deepEqual(next.draft, withEdits.draft);
+  assert.deepEqual(next.audit, withEdits.audit);
+  assert.equal(next.budgetCap, 750);
+  assert.equal(next.skus[0].onHand, 10);
+  assert.equal(next.suppliers[1].email, 's2@example.test');
+});
+
+test('receipt import rejects duplicate receipts, malformed dates, and unknown item IDs atomically', () => {
+  const data = initialData();
+  const receipt = { sales_id: '1', orderDate: 'Mon Oct 12 2026', items: { id: 'SKU1', quantity: 2 } };
+  assert.equal(parseSalesFile('s.json', JSON.stringify([receipt, receipt]), data.skus).ok, false);
+  assert.equal(parseSalesFile('s.json', JSON.stringify([{ ...receipt, orderDate: 'Mon Feb 30 2026' }]), data.skus).ok, false);
+  assert.equal(parseSalesFile('s.json', JSON.stringify([{ ...receipt, items: { id: 'bad', quantity: 2 } }]), data.skus).ok, false);
+  assert.equal(parseSalesFile('s.json', JSON.stringify([{ ...receipt, items: [] }]), data.skus).ok, false);
+  const anotherDate = { ...receipt, orderDate: 'Tue Oct 13 2026' };
+  assert.equal(parseSalesFile('s.json', JSON.stringify([receipt, anotherDate]), data.skus).ok, true);
 });
 
 test('storage errors are explicit', () => {

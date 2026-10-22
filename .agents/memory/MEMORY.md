@@ -2,3 +2,4 @@
 - [Demo and production boundaries](demo-production-boundaries.md) — shared Gmail sending requires explicit consent; Gmail acceptance is not supplier delivery, and local activity is not immutable.
 - [Account data boundaries](account-data-boundaries.md) — do not assign the old anonymous demo workspace to the first account that signs in.
 - [UI scope boundaries](ui-scope-boundaries.md) — retain the original demo components and Activity Log; authentication and PDF generation are out of scope.
+- [Dataset interpretation](dataset-interpretation.md) — sales history updates demand, not the supplied stock snapshot; supplier terms still require confirmation before live ordering.

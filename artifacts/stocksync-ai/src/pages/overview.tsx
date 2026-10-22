@@ -30,6 +30,6 @@ export function OverviewPage({ data, onImport }: PageProps & { onImport: () => v
         </Link>
       </div>
     </section>
-    {data.lastImport && <p className="item-detail" style={{ marginTop: 14 }} data-testid="text-last-import"><Send size={11} /> Sales transaction sample: {data.lastImport.rows} rows, window {data.lastImport.windowStart} to {data.lastImport.windowEnd}.</p>}
+    {data.lastImport && <p className="item-detail" style={{ marginTop: 14 }} data-testid="text-last-import"><Send size={11} /> {data.lastImport.source ?? 'Sales history'}: {data.lastImport.transactions !== undefined ? `${data.lastImport.transactions} transactions · ` : ''}{data.lastImport.rows} item rows, window {data.lastImport.windowStart} to {data.lastImport.windowEnd}.</p>}
   </main>;
 }

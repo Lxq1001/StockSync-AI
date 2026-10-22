@@ -1,4 +1,5 @@
-import { mockItems, mockSalesTransactions, mockSalesWindow, mockSuppliers } from '../data/mockDataset';
+import { datasetRevision, type DatasetBundle } from './dataset';
+import { parseSalesFile, previewImport, type SalesRow } from './sales-import';
 
 // Inventory decisions stay browser-local; Gmail sends are handled by the API server.
 export type SKU = {
@@ -31,8 +32,9 @@ export type StoreData = {
   version: 2;
   skus: SKU[]; suppliers: Supplier[]; orders: PurchaseOrder[]; audit: AuditEntry[];
   budgetCap: number; rejectedSuggestions: string[]; legacyOrders: LegacyOrder[];
-  salesTransactions?: import('../data/mockDataset').MockSaleTransaction[];
-  draft?: TemplateDraft; lastImport?: { importedAt: string; rows: number; windowStart: string; windowEnd: string };
+  salesTransactions?: SalesRow[];
+  datasetRevision?: string;
+  draft?: TemplateDraft; lastImport?: { importedAt: string; rows: number; transactions?: number; source?: string; windowStart: string; windowEnd: string };
 };
 
 export const MANAGER = 'Aina Rahman';
@@ -46,32 +48,61 @@ export const formatMoney = (value: number) =>
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const uid = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
-export const initialData = (): StoreData => {
-  const suppliers: Supplier[] = mockSuppliers.map(s => ({ ...s, contactMethod: 'Email' }));
-  const skus: SKU[] = mockItems.map(item => {
-    const recentSales = Array.from({ length: 14 }, (_, day) => {
-      const date = new Date(Date.UTC(2026, 9, 8 + day)).toISOString().slice(0, 10);
-      return mockSalesTransactions.find(row => row.item_id === item.id && row.date === date)?.quantity_sold ?? 0;
-    });
-    const supplier = suppliers.find(s => s.id === item.supplierId)!;
+export const initialData = (bundle?: DatasetBundle): StoreData => {
+  const base: StoreData = {
+    version: 2, skus: [], suppliers: [], orders: [], audit: [], budgetCap: 500,
+    rejectedSuggestions: [], legacyOrders: [], salesTransactions: [],
+  };
+  if (!bundle) return base;
+  // These files do not specify lead times, minimum quantities, or pack sizes.
+  // Retain the demo assumptions until those supplier terms are provided.
+  base.suppliers = bundle.suppliers.map(s => ({
+    id: s.supplier_id, name: s.name, MOQ: 1, leadTimeDays: 2, contactMethod: 'Email',
+  }));
+  const suppliers = new Set(base.suppliers.map(s => s.id));
+  base.skus = bundle.inventory.map(item => {
+    if (!suppliers.has(item.supplier_id)) throw new Error(`Unknown supplier for ${item.id}.`);
+    if (![item.stock, item.item_price].every(n => Number.isFinite(n) && n >= 0)) throw new Error(`Invalid stock or price for ${item.id}.`);
     return {
-      id: item.id, name: item.name, category: item.category, onHand: item.onHand, unit: 'unit',
-      avgDailyDemand: recentSales.reduce((sum, value) => sum + value, 0) / recentSales.length,
-      leadTimeDays: supplier.leadTimeDays, reorderBuffer: 2, supplierId: item.supplierId,
-      unitCost: item.unitCost, recentSales, batchSize: supplier.MOQ,
+      id: item.id, name: item.name, category: item.category, onHand: item.stock, unit: 'unit',
+      avgDailyDemand: 0, leadTimeDays: 2, reorderBuffer: 2, supplierId: item.supplier_id,
+      unitCost: item.item_price, recentSales: Array(7).fill(0), batchSize: 1,
     };
   });
-  return {
-    version: 2, skus, suppliers, orders: [], audit: [], budgetCap: 500,
-    rejectedSuggestions: [], legacyOrders: [], salesTransactions: [...mockSalesTransactions],
-    lastImport: {
-      importedAt: '2026-10-22T00:00:00.000Z',
-      rows: mockSalesTransactions.length,
-      windowStart: mockSalesWindow.start,
-      windowEnd: mockSalesWindow.end,
-    },
+  const result = parseSalesFile('sales_transaction.json', JSON.stringify(bundle.salesTransactions), base.skus);
+  if (!result.ok) throw new Error(`Starting sales data is invalid: ${result.errors.join(' ')}`);
+  const preview = previewImport(base, result.rows);
+  const byId = new Map(preview.items.map(item => [item.id, item]));
+  base.skus = base.skus.map(s => {
+    const sales = byId.get(s.id);
+    return sales ? { ...s, avgDailyDemand: sales.after, recentSales: sales.recentSales } : s;
+  });
+  base.salesTransactions = result.rows;
+  base.lastImport = {
+    importedAt: new Date().toISOString(), rows: preview.rows, transactions: preview.transactions,
+    source: 'Provided sales history', windowStart: preview.windowStart, windowEnd: preview.windowEnd,
   };
+  base.datasetRevision = datasetRevision(bundle);
+  return base;
 };
+
+/** Explicitly loads catalog values, retaining existing orders, draft, and activity. */
+export function loadProvidedDataset(current: StoreData, bundle: DatasetBundle): StoreData {
+  const incoming = initialData(bundle);
+  const itemIds = new Set(incoming.skus.map(s => s.id));
+  const supplierIds = new Set(incoming.suppliers.map(s => s.id));
+  return {
+    ...current,
+    skus: [...incoming.skus, ...current.skus.filter(s => !itemIds.has(s.id))],
+    suppliers: [
+      ...incoming.suppliers.map(s => ({ ...s, email: current.suppliers.find(v => v.id === s.id)?.email })),
+      ...current.suppliers.filter(s => !supplierIds.has(s.id)),
+    ],
+    salesTransactions: incoming.salesTransactions, lastImport: incoming.lastImport,
+    datasetRevision: incoming.datasetRevision,
+    rejectedSuggestions: [],
+  };
+}
 
 /** Days of stock at current average use. Zero demand means no depletion risk. */
 export function estimatedCover(sku: SKU): number {
@@ -268,7 +299,7 @@ export function loadStore(storage: KV | undefined): { data: StoreData; message?:
         }
         return { data: parsed };
       }
-      return { data: initialData(), message: 'Saved demo data was unreadable, so the original sample was loaded. It will be replaced on your next change.' };
+      return { data: initialData(), message: 'Saved browser data was unreadable. The provided dataset will be loaded from the API.' };
     }
     const v1 = storage.getItem(LEGACY_KEY);
     if (v1) {
@@ -277,7 +308,7 @@ export function loadStore(storage: KV | undefined): { data: StoreData; message?:
     }
     return { data: initialData() };
   } catch (e) {
-    return { data: initialData(), message: `Could not read saved demo data (${e instanceof Error ? e.message : 'storage error'}). The original sample was loaded.` };
+    return { data: initialData(), message: `Could not read saved browser data (${e instanceof Error ? e.message : 'storage error'}). Loading the provided dataset from the API.` };
   }
 }
 export function saveStore(storage: KV | undefined, data: StoreData) {

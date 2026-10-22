@@ -1,22 +1,13 @@
 import { Router, type Request, type Response } from "express";
 import { ReplitConnectors } from "@replit/connectors-sdk";
 import { parseSupplierRecipients } from "../lib/supplier-recipient-config";
+import { stockDataset } from "../lib/stock-dataset";
 
 const router = Router();
-const supplierIds = new Set(["S1", "S2", "S3"]);
-const itemSupplier: Record<string, string> = {
-  SKU1: "S1", SKU2: "S1", SKU3: "S1", SKU4: "S1", SKU5: "S1",
-  SKU6: "S2", SKU7: "S2", SKU8: "S2", SKU9: "S2", SKU10: "S2",
-  SKU11: "S3", SKU12: "S3", SKU13: "S3", SKU14: "S3", SKU15: "S3",
-};
-const supplierNames: Record<string, string> = {
-  S1: "DailySun Sdn Bhd", S2: "PadiMas Sdn Bhd", S3: "LifeThings Sdn Bhd",
-};
-const itemNames: Record<string, string> = {
-  SKU1: "Fresh Milk (1L)", SKU2: "Butter (250G)", SKU3: "Eggs (10 pcs)", SKU4: "Cheese (200G)", SKU5: "Yogurt (500G)",
-  SKU6: "Rice (5KG)", SKU7: "Bread (400g)", SKU8: "Instant Noodles (5 PACK)", SKU9: "Flour (1KG)", SKU10: "Cooking Oil (1KG)",
-  SKU11: "Toothpaste (150G)", SKU12: "Shampoo (650ML)", SKU13: "Body Wash (500ML)", SKU14: "Laundry Detergent (2KG)", SKU15: "Dishwashing Liquid (900ML)",
-};
+const supplierIds = new Set(stockDataset.suppliers.map(s => s.supplier_id));
+const itemSupplier: Record<string, string> = Object.fromEntries(stockDataset.inventory.map(i => [i.id, i.supplier_id]));
+const supplierNames: Record<string, string> = Object.fromEntries(stockDataset.suppliers.map(s => [s.supplier_id, s.name]));
+const itemNames: Record<string, string> = Object.fromEntries(stockDataset.inventory.map(i => [i.id, i.name]));
 const sendTimes = new Map<string, number[]>();
 const successfulSends = new Map<string, { id: string; at: number }>();
 
