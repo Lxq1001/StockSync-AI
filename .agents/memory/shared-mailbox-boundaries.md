@@ -3,23 +3,11 @@ name: Shared-mailbox sending boundaries
 description: User-required no-login sending on both Replit and VS Code, with private access and conservative retry behavior.
 ---
 
-Supplier email must work in both Replit and a standalone VS Code download. The existing working mode uses an owner-configured shared Gmail mailbox without website login.
+Supplier email must work in both Replit and a standalone VS Code download. Keep one owner-configured shared Gmail sender without website login or per-visitor Google sign-in.
 
-**Why:** The user explicitly requested actual sending without adding a website login, and selected both environments. A source download does not transfer Replit's mailbox authorization.
+**Why:** The user explicitly confirmed retaining one shared Gmail sender after considering per-user Google authorization and declining the Google Cloud setup. Both Replit and VS Code remain required; a source download does not transfer Replit's mailbox authorization.
 
-**How to apply:** Retain a Replit Gmail connection for hosted development and a separately owner-configured Gmail SMTP option for local development. Keep credentials server-only and outside source exports. No website account or sign-in page should be introduced as an implicit prerequisite.
-
-The user subsequently requested connecting each user's own Google account from the Order Email From section. This explicitly permits Google authorization for choosing the sender; the earlier no-login requirement must not be used to reject that request.
-
-**Why:** The user wants users to send through their own Google accounts, rather than relying solely on the owner's shared mailbox.
-
-**How to apply:** Use Google's hosted sign-in and Gmail sending consent, never a StockSync form collecting Google passwords. Keep account connection separate from a full website signup system unless requested. Preserve the existing working shared mode until a replacement is deliberately enabled, but never silently fall back to the shared mailbox after a personal-account authorization or send failure.
-
-Owner-facing Google OAuth setup instructions use `/api/google/callback` as the callback path, with the Replit development origin and the local gateway origin (`http://localhost:3000`) registered separately.
-
-**Why:** Google requires an exact match with the redirect URIs the owner registers outside the repository. Switching callback paths later requires coordinating that external configuration.
-
-**How to apply:** Match this contract when implementing account connection; do not substitute a different callback path without updating the Google Cloud instructions. Obtain any published origin from deployment configuration, not from the development domain.
+**How to apply:** Retain a Replit Gmail connection for hosted development and a separately owner-configured Gmail SMTP option for local development. Keep From tied to the actual shared sending account and credentials server-only, outside source exports. Do not add a Google account selector, OAuth callback, website signup, or password-entry form unless the user explicitly changes this decision. No Google Cloud client setup is needed for the existing Replit shared-mailbox mode.
 
 No-login sending is for localhost/private trusted-staff access, not an unrestricted public sending service. Server recipient approval and sending limits reduce abuse but do not authenticate visitors.
 
