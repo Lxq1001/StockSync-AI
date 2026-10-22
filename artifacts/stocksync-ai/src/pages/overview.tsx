@@ -1,6 +1,6 @@
 import { Link } from 'wouter';
-import { AlertTriangle, ArrowUpRight, Boxes, ClipboardList, FileUp, Send, Truck } from 'lucide-react';
-import { Empty, PageTitle, Stat, itemName, money, supplierName, when, type PageProps } from '@/components/common';
+import { ArrowUpRight, Boxes, ClipboardList, FileUp, Send, Truck } from 'lucide-react';
+import { PageTitle, Stat, type PageProps } from '@/components/common';
 import { estimatedCover, isLowCover, MANAGER, suggestions } from '@/lib/procurement';
 
 export function OverviewPage({ data, onImport }: PageProps & { onImport: () => void }) {
@@ -30,16 +30,7 @@ export function OverviewPage({ data, onImport }: PageProps & { onImport: () => v
         </Link>
       </div>
     </section>
-    <div className="dashboard-grid">
-      <section className="panel"><div className="panel-head"><div><div className="panel-title">Orders in motion</div></div><Link href="/purchase-orders" className="inline-link" data-testid="link-view-order-status">Order status <ArrowUpRight size={13} /></Link></div>
-        {inMotion.length ? <div className="order-list">{inMotion.slice(0, 5).map(o => <div className="order-row" key={o.id}><div><div className="item-name">{itemName(data, o.itemId)}</div><div className="item-detail">{o.id} · {supplierName(data, o.supplierId)}</div></div><div className="mono">{money(o.totalCost)}</div><div><span className={`pill ${o.status === 'Pending Delivery' ? 'delivery' : 'sent'}`}>{o.status}</span></div><div className="hide-small item-detail">{when(o.createdAt)}</div></div>)}</div>
-          : <Empty title="No orders in motion" detail="Approve a suggested task in Inventory to draft and simulate a supplier email." />}
-      </section>
-      <section className="panel"><div className="panel-head"><div><div className="panel-title">Stock to watch</div></div><Link href="/inventory" className="inline-link" data-testid="link-stock-watch">Inventory <ArrowUpRight size={13} /></Link></div>
-        {atRisk.length ? <div className="risk-list">{atRisk.slice(0, 4).map(i => <div className="risk-row" key={i.id}><div className="risk-icon"><AlertTriangle /></div><div style={{ flex: 1 }}><div className="risk-name">{i.name}</div><div className="risk-detail">{i.onHand} {i.unit} left · approx. {estimatedCover(i).toFixed(1)} days at current use</div></div><div className="mono cover-low">{estimatedCover(i).toFixed(1)}d</div></div>)}</div>
-          : <Empty title="Nothing at risk" detail="Every item has more than 7 days of estimated cover." />}
-      </section>
-    </div>
+
     {data.lastImport && <p className="item-detail" style={{ marginTop: 14 }} data-testid="text-last-import"><Send size={11} /> Last sales import: {data.lastImport.rows} rows, window {data.lastImport.windowStart} to {data.lastImport.windowEnd}.</p>}
   </main>;
 }
