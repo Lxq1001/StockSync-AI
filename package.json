@@ -5,7 +5,7 @@
   "scripts": {
     "preinstall": "node scripts/src/check-package-manager.mjs",
     "dev": "node scripts/src/dev-local.mjs",
-    "test:local": "node --test scripts/src/local-gateway.test.mjs",
+    "test:local": "node --test scripts/src/local-gateway.test.mjs scripts/src/pnpm-command.test.mjs",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"

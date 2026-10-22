@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createLocalGateway } from "./local-gateway.mjs";
+import { pnpmCommand } from "./pnpm-command.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const pnpm = process.env.npm_execpath;
@@ -48,7 +49,8 @@ function start(command, args, options = {}) {
   return child;
 }
 async function runPnpm(args) {
-  const child = start(process.execPath, [pnpm, ...args]);
+  const invocation = pnpmCommand(pnpm, args);
+  const child = start(invocation.command, invocation.args);
   const code = await new Promise(resolve => child.once("exit", resolve));
   if (code !== 0) throw new Error(`pnpm ${args.join(" ")} failed.`);
 }
