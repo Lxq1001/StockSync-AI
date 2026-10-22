@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { ReplitConnectors } from "@replit/connectors-sdk";
+import { parseSupplierRecipients } from "../lib/supplier-recipient-config";
 
 const router = Router();
 const supplierIds = new Set(["S1", "S2", "S3"]);
@@ -16,50 +17,16 @@ const itemNames: Record<string, string> = {
   SKU6: "Rice (5KG)", SKU7: "Bread (400g)", SKU8: "Instant Noodles (5 PACK)", SKU9: "Flour (1KG)", SKU10: "Cooking Oil (1KG)",
   SKU11: "Toothpaste (150G)", SKU12: "Shampoo (650ML)", SKU13: "Body Wash (500ML)", SKU14: "Laundry Detergent (2KG)", SKU15: "Dishwashing Liquid (900ML)",
 };
-const emailPattern = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
 const sendTimes = new Map<string, number[]>();
 const successfulSends = new Map<string, { id: string; at: number }>();
 
 function configuredRecipients(): Record<string, string> | null {
-  const raw = process.env.STOCKSYNC_SUPPLIER_RECIPIENTS_JSON;
-  if (!raw) return null;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    const valid: Record<string, string> = {};
-    for (const [id, address] of Object.entries(parsed)) {
-      if (supplierIds.has(id) && typeof address === "string" && emailPattern.test(address.trim())) {
-        valid[id] = address.trim();
-      }
-    }
-    return Object.keys(valid).length === supplierIds.size ? valid : null;
-  } catch {
-    return null;
-  }
+  return parseSupplierRecipients(process.env.STOCKSYNC_SUPPLIER_RECIPIENTS_JSON).recipients;
 }
 
 function recipientConfigStatus() {
-  const raw = process.env.STOCKSYNC_SUPPLIER_RECIPIENTS_JSON;
-  if (!raw) return { status: "missing", configuredSupplierCount: 0, validAddressCount: 0 };
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return { status: "invalid_json", configuredSupplierCount: 0, validAddressCount: 0 };
-  }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return { status: "invalid_shape", configuredSupplierCount: 0, validAddressCount: 0 };
-  }
-  const entries = Object.entries(parsed);
-  const configuredSupplierCount = entries.filter(([id]) => supplierIds.has(id)).length;
-  const validAddressCount = entries.filter(([id, address]) =>
-    supplierIds.has(id) && typeof address === "string" && emailPattern.test(address.trim()),
-  ).length;
-  return {
-    status: validAddressCount === supplierIds.size ? "ready" : "incomplete_or_invalid",
-    configuredSupplierCount,
-    validAddressCount,
-  };
+  const { recipients: _recipients, ...status } = parseSupplierRecipients(process.env.STOCKSYNC_SUPPLIER_RECIPIENTS_JSON);
+  return status;
 }
 
 function sameOrigin(req: Request): boolean {

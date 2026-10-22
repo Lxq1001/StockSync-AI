@@ -1,4 +1,4 @@
 - [GitHub connector availability](github-connector-availability.md) — verify a callable connection after attachment; an “attached” result alone may not expose GitHub API access.
-- [Demo and production boundaries](demo-production-boundaries.md) — opening Gmail compose and a user-confirmed status do not verify supplier delivery or create an immutable audit record.
+- [Demo and production boundaries](demo-production-boundaries.md) — shared Gmail sending requires explicit consent; Gmail acceptance is not supplier delivery, and local activity is not immutable.
 - [Account data boundaries](account-data-boundaries.md) — do not assign the old anonymous demo workspace to the first account that signs in.
 - [UI scope boundaries](ui-scope-boundaries.md) — retain the original demo components and Activity Log; authentication and PDF generation are out of scope.
