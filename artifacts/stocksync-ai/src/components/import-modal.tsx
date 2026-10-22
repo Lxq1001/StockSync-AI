@@ -43,11 +43,6 @@ export function ImportModal({ data, update, toast, onClose, providedImportData }
       <div className="item-detail">Dates as YYYY-MM-DD, quantity 0 or more, itemId must match an inventory item. Max {IMPORT_MAX_BYTES / 1024} KB. This is not a database connection; SQL dumps and other formats are not supported. If any row is invalid, nothing is imported.</div>
       <div className="item-detail">Known item IDs: {data.skus.map(s => s.id).join(', ')}</div>
       <button type="button" className="inline-link link-button" onClick={download} data-testid="button-download-sample"><Download size={13} /> Download sample CSV</button>
-      {providedImportData && <div style={{ marginTop: 12 }}><button className="button" disabled={busy} data-testid="button-use-provided-import" onClick={() => {
-        setErrors([]); setPreview(null); setFileName('import_data.json');
-        const result = parseSalesFile('import_data.json', JSON.stringify(providedImportData), data.skus);
-        if (result.ok) setPreview(previewImport(data, result.rows)); else setErrors(result.errors);
-      }}>Preview provided sales update ({providedImportData.length} transactions)</button></div>}
     </div>
     <label className="file-drop" data-testid="label-import-file">
       <FileUp size={18} /><span>{fileName || 'Choose a .csv or .json file'}</span>
@@ -58,8 +53,8 @@ export function ImportModal({ data, update, toast, onClose, providedImportData }
     {preview && <div className="import-preview" data-testid="panel-import-preview">
       <div className="item-name">{preview.rows} valid rows · {preview.items.length} item{preview.items.length === 1 ? '' : 's'} · window {preview.windowStart} to {preview.windowEnd}</div>
       {preview.outside > 0 && <div className="item-detail">{preview.outside} row{preview.outside === 1 ? '' : 's'} fall outside the 7-day window and are ignored for demand.</div>}
-      <table className="data-table compact"><thead><tr><th>Item</th><th>Avg/day now</th><th>Avg/day after</th></tr></thead>
-        <tbody>{preview.items.map(i => <tr key={i.id}><td>{i.name}</td><td className="mono">{i.before}</td><td className="mono">{i.after}</td></tr>)}</tbody></table>
+      <table className="data-table compact"><thead><tr><th>Item</th><th>Avg/day after</th></tr></thead>
+        <tbody>{preview.items.map(i => <tr key={i.id}><td>{i.name}</td><td className="mono">{i.after}</td></tr>)}</tbody></table>
     </div>}
   </Modal>;
 }
