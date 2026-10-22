@@ -15,7 +15,7 @@ export function InventoryPage({ data, update, toast, startDraft }: PageProps & {
   const reject = (id: string, name: string) => { if (update(d => rejectSuggestion(d, id))) toast(`Suggestion for ${name} rejected. It stays dismissed until you reset the demo.`); };
 
   return <main className="content">
-    <PageTitle eyebrow="Stock levels & forecasts" title="Inventory" subtitle="A practical view of stock cover, suggested quantities and deliberate orders." right={<span className="pill delivery">Synthetic sales data</span>} />
+    <PageTitle title="Inventory" right={<span className="pill delivery">Synthetic sales data</span>} />
     <section className="panel ai-tasks" data-testid="panel-ai-tasks">
       <div className="panel-head"><div><div className="panel-title"><Sparkles size={15} /> AI suggested tasks</div><div className="panel-meta">Items with estimated cover of 7 days or less · you decide every order</div></div><span className="pill">{tasks.length} open</span></div>
       {tasks.length ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Item</th><th>Suggested qty</th><th>Total cost</th><th>Cover</th><th>Action</th></tr></thead><tbody>

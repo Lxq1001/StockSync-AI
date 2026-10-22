@@ -1,17 +1,15 @@
 import { Link } from 'wouter';
-import { AlertTriangle, ArrowUpRight, Boxes, ClipboardList, FileUp, ListChecks, Send, Truck } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Boxes, ClipboardList, FileUp, Send, Truck } from 'lucide-react';
 import { Empty, PageTitle, Stat, itemName, money, supplierName, when, type PageProps } from '@/components/common';
 import { estimatedCover, isLowCover, MANAGER, suggestions } from '@/lib/procurement';
 
 export function OverviewPage({ data, onImport }: PageProps & { onImport: () => void }) {
   const tasks = suggestions(data), atRisk = data.skus.filter(isLowCover).sort((a, b) => estimatedCover(a) - estimatedCover(b));
   const inMotion = data.orders.filter(o => o.status !== 'Received');
-  const taskTotal = tasks.reduce((s, t) => s + t.totalCost, 0);
   return <main className="content">
-    <PageTitle eyebrow="Kuala Lumpur · local demo workspace" title={`Good morning, ${MANAGER.split(' ')[0]}`} subtitle="A clear view of what needs attention before the next service."
+    <PageTitle title={`Good morning, ${MANAGER.split(' ')[0]}`}
       right={<button className="button primary" onClick={onImport} data-testid="button-import"><FileUp /> Import</button>} />
     <div className="stats">
-      <Stat label="Suggested tasks" value={tasks.length} foot={`${money(taskTotal)} if all approved`} icon={<ListChecks />} />
       <Stat label="Stock at risk" value={atRisk.length} foot="Estimated cover 7 days or less" icon={<AlertTriangle />} />
       <Stat label="Sent / pending" value={inMotion.length} foot="Simulated emails, not yet received" icon={<Truck />} />
       <Stat label="Inventory items" value={data.skus.length} foot={`Across ${data.suppliers.length} local suppliers`} icon={<Boxes />} />
