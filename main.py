@@ -4,6 +4,10 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 import sys
 import os
+from dotenv import load_dotenv
+
+# Load the secret keys from your .env file into memory
+load_dotenv()
 
 # Add the runpod folder to the path so we can import your logic
 sys.path.append(os.path.join(os.path.dirname(__file__), "runpod"))
