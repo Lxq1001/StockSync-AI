@@ -3,9 +3,9 @@ import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import {
   buildDraft, buildMailtoUrl, buildGmailComposeUrl, editItem, initialData as emptyData, RETIRED_STORE_KEYS, loadStore, rejectSuggestion, saveStore, sendDraft,
-  setDraft, setOrderStatus, STORE_KEY, suggestions, validateItemEdit, type StoreData,
+  setDraft, setOrderStatus, STORE_KEY, suggestedQuantity, suggestions, validateItemEdit, type StoreData,
 } from './procurement';
-import { applyImport, parseCsv, parseSalesFile, previewImport, sampleCsv } from './sales-import';
+import { applyImport, averageDailyUse, parseCsv, parseSalesFile, previewImport, sampleCsv } from './sales-import';
 import { activateProvidedWorkspace, loadProvidedWorkspace, mergeSupplierContacts, providedWorkspace } from './provided-dataset';
 import type { ProvidedDataset } from './provided-dataset';
 import { readDatasetResponse } from './dataset-request';
@@ -52,16 +52,38 @@ class MemStore { m = new Map<string, string>(); fail = false;
   setItem(k: string, v: string) { if (this.fail) throw new Error('QuotaExceededError'); this.m.set(k, v); } }
 const roundTrip = (s: MemStore, d: StoreData) => { saveStore(s, d); return loadStore(s).data; };
 
-test('suggestions include only items with cover <= 7 days', () => {
+test('average use is latest weekly sales divided by seven, rounded up', () => {
+  assert.equal(averageDailyUse([1, 2, 1, 2, 1, 2, 2]), 2);
+  assert.equal(averageDailyUse([2, 2, 2, 2, 2, 2, 2]), 2);
+  assert.equal(averageDailyUse([0, 0, 0, 0, 0, 0, 1]), 1);
+  assert.equal(averageDailyUse([0, 0, 0, 0, 0, 0, 0]), 0);
+  for (const sku of initialData().skus)
+    assert.equal(sku.avgDailyDemand, Math.ceil(sku.recentSales.reduce((a, b) => a + b, 0) / 7));
+});
+
+test('suggestions include only on-hand stock <= 7 with demand and use 30 days of average use', () => {
   const d = initialData();
   const ids = suggestions(d).map(s => s.sku.id);
   for (const sku of d.skus) {
-    const cover = sku.onHand / sku.avgDailyDemand;
-    assert.equal(ids.includes(sku.id), cover <= 7, sku.name);
+    assert.equal(ids.includes(sku.id), sku.onHand <= 7 && sku.avgDailyDemand > 0, sku.name);
   }
   const t = suggestions(d)[0];
   assert.equal(t.totalCost, Math.round(t.quantity * t.sku.unitCost * 100) / 100);
-  assert.equal(t.quantity % t.sku.batchSize, 0);
+  assert.equal(t.quantity, t.sku.avgDailyDemand * 30);
+});
+
+test('the seven-unit threshold is inclusive, not seven days of cover or batch rounding', () => {
+  const data = initialData();
+  const sku = { ...data.skus[0], onHand: 7, avgDailyDemand: 2, batchSize: 17, leadTimeDays: 99 };
+  assert.equal(suggestedQuantity(sku), 60);
+  assert.equal(suggestedQuantity({ ...sku, onHand: 0 }), 60);
+  assert.equal(suggestedQuantity({ ...sku, onHand: 8 }), 0);
+  assert.equal(suggestedQuantity({ ...sku, avgDailyDemand: 0 }), 0);
+  const d = { ...data, skus: [sku, { ...sku, id: 'above-threshold', onHand: 8, avgDailyDemand: 100 }] };
+  assert.deepEqual(suggestions(d).map(s => s.sku.id), [sku.id]);
+  const draft = buildDraft(data, sku.id, suggestions(d)[0].quantity);
+  assert.equal(draft.quantity, 60);
+  assert.match(draft.body, /Quantity: 60 unit/);
 });
 
 test('rejecting a suggestion persists across reload', () => {
@@ -167,7 +189,7 @@ test('provided import accepts receipt objects and arrays, preserving stock and d
   assert.equal(parsed.rows.length, 55);
   const preview = previewImport(data, parsed.rows);
   const next = applyImport(data, preview, 'Tester');
-  assert.equal(next.skus.find(s => s.id === 'SKU1')?.avgDailyDemand, 1.57);
+  assert.equal(next.skus.find(s => s.id === 'SKU1')?.avgDailyDemand, 2);
   assert.deepEqual(next.skus.map(s => s.onHand), data.skus.map(s => s.onHand));
   assert.equal(next.salesTransactions?.length, 97);
   assert.equal(applyImport(next, preview, 'Tester').salesTransactions?.length, 97);
@@ -227,9 +249,22 @@ test('cleanup preserves valid new-dataset orders, edits, drafts, imported sales,
   assert.deepEqual(cleaned.draft, imported.draft);
   assert.deepEqual(cleaned.audit, imported.audit);
   assert.equal(cleaned.skus[0].onHand, 77);
-  assert.equal(cleaned.skus[0].avgDailyDemand, 1.57);
+  assert.equal(cleaned.skus[0].avgDailyDemand, 2);
   assert.equal(cleaned.salesTransactions?.length, 97);
   assert.deepEqual(roundTrip(new MemStore(), cleaned), JSON.parse(JSON.stringify(cleaned)));
+});
+
+test('opening an existing workspace recalculates old fractional averages without changing orders or stock', () => {
+  const base = initialData();
+  const draft = buildDraft(base, 'SKU1', 3);
+  const saved = sendDraft(setDraft(base, draft), draft).data;
+  const legacy = { ...saved, skus: saved.skus.map(s => ({ ...s, avgDailyDemand: s.recentSales.reduce((a, b) => a + b, 0) / 7 })) };
+  const next = loadProvidedWorkspace(legacy, provided);
+  for (const sku of next.skus) assert.equal(sku.avgDailyDemand, averageDailyUse(sku.recentSales));
+  assert.deepEqual(next.orders, legacy.orders);
+  assert.deepEqual(next.salesTransactions, legacy.salesTransactions);
+  assert.deepEqual(next.skus.map(s => s.onHand), legacy.skus.map(s => s.onHand));
+  assert.deepEqual(next.audit, legacy.audit);
 });
 
 test('retired data is not deleted until the cleaned workspace saves successfully', () => {
@@ -275,7 +310,7 @@ test('import validates atomically and recomputes a 7-day window without touching
   const milk = next.skus.find(s => s.id === 'SKU1')!;
   assert.equal(milk.avgDailyDemand, 3);
   assert.equal(milk.onHand, 10);
-  assert.equal(next.skus.find(s => s.id === 'SKU6')!.avgDailyDemand, 0.14);
+  assert.equal(next.skus.find(s => s.id === 'SKU6')!.avgDailyDemand, 1);
   const json = parseSalesFile('s.json', JSON.stringify([{ itemId: 'SKU6', date: '2025-04-18', quantity: 'x' }]), d.skus);
   assert.equal(json.ok, false);
   assert.ok(parseSalesFile('sample.csv', sampleCsv(d.skus, '2025-04-18'), d.skus).ok);

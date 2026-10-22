@@ -5,3 +5,4 @@
 - [Supplied datasets only](dataset-source-policy.md) — the user retired the original sample database; use supplied data only, never old samples as a reset or fallback.
 - [Local routing boundary](local-routing-boundary.md) — standalone VS Code runs need their own frontend/API router; a Vite page returning HTML is not dataset JSON.
 - [Shared mailbox boundaries](shared-mailbox-boundaries.md) — default to a filled Gmail composer without setup; never infer sending from opening it. Keep legacy API safeguards.
+- [Inventory reorder policy](inventory-reorder-policy.md) — daily use is ceil(weekly sales ÷ 7); suggest 30 days of use only when on-hand quantity is at most 7.

@@ -20,7 +20,7 @@ export function EditItemModal({ sku, update, toast, onClose }: Omit<PageProps, '
 }
 
 export function OrderItemModal({ sku, supplier, onConfirm, onClose }: { sku: SKU; supplier: string; onConfirm: (qty: number) => void; onClose: () => void }) {
-  const [qty, setQty] = useState(String(suggestedQuantity(sku)));
+  const [qty, setQty] = useState(suggestedQuantity(sku) > 0 ? String(suggestedQuantity(sku)) : '');
   const [error, setError] = useState('');
   const n = Number(qty);
   const valid = qty.trim() !== '' && Number.isSafeInteger(n) && n >= 1 && n <= 100000;

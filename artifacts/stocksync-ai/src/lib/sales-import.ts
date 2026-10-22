@@ -9,6 +9,9 @@ import type { SKU, StoreData } from './procurement';
 export const IMPORT_MAX_BYTES = 512 * 1024;
 export const IMPORT_MAX_ROWS = 5000;
 export const DEMAND_WINDOW_DAYS = 7;
+/** Whole-unit daily use from the latest seven daily sales totals. */
+export const averageDailyUse = (recentSales: readonly number[]) =>
+  Math.ceil(recentSales.reduce((total, quantity) => total + quantity, 0) / DEMAND_WINDOW_DAYS);
 export type SalesRow = { itemId: string; date: string; quantity: number };
 export type ImportResult = { ok: true; rows: SalesRow[] } | { ok: false; errors: string[] };
 
@@ -97,7 +100,7 @@ function normalizeReceiptDate(value: unknown): unknown {
 export type ImportPreview = { windowStart: string; windowEnd: string; items: { id: string; name: string; before: number; after: number; recentSales: number[] }[]; rows: number; outside: number; salesRows: SalesRow[] };
 /**
  * The 7-day window ends on the latest date in the file. Each item that appears in the file gets
- * recentSales = daily totals over those 7 days (missing days = 0) and avgDailyDemand = total / 7.
+ * recentSales = daily totals over those 7 days (missing days = 0) and avgDailyDemand = ceil(total / 7).
  * Items absent from the file are unchanged. Stock on hand is never decremented.
  */
 export function previewImport(data: StoreData, rows: SalesRow[]): ImportPreview {
@@ -110,7 +113,7 @@ export function previewImport(data: StoreData, rows: SalesRow[]): ImportPreview 
   for (const r of rows) { const i = days.indexOf(r.date); if (i < 0) { outside++; continue; } totals.get(r.itemId)![i] += r.quantity; }
   const items = ids.map(id => {
     const sku = data.skus.find(s => s.id === id)!; const recentSales = totals.get(id)!.map(n => Math.round(n * 100) / 100);
-    return { id, name: sku.name, before: sku.avgDailyDemand, after: Math.round(recentSales.reduce((a, b) => a + b, 0) / DEMAND_WINDOW_DAYS * 100) / 100, recentSales };
+    return { id, name: sku.name, before: sku.avgDailyDemand, after: averageDailyUse(recentSales), recentSales };
   });
   return { windowStart, windowEnd, items, rows: rows.length, outside, salesRows: rows };
 }

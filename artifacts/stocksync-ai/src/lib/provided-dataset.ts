@@ -1,6 +1,6 @@
 import type { StockDataset } from '@workspace/api-client-react';
 import { initialData, RETIRED_STORE_KEYS, saveStore, validV2, type StoreData } from './procurement';
-import { parseSalesFile, previewImport } from './sales-import';
+import { averageDailyUse, parseSalesFile, previewImport } from './sales-import';
 
 export type ProvidedDataset = StockDataset;
 
@@ -62,7 +62,7 @@ export function loadProvidedWorkspace(current: StoreData, bundle: ProvidedDatase
     skus: next.skus.map(s => {
       const saved = current.skus.find(old => old.id === s.id && old.supplierId === s.supplierId);
       return saved ? { ...s, name: saved.name, onHand: saved.onHand, unitCost: saved.unitCost,
-        ...(hasHistory ? { avgDailyDemand: saved.avgDailyDemand, recentSales: saved.recentSales } : {}) } : s;
+        ...(hasHistory ? { avgDailyDemand: averageDailyUse(saved.recentSales), recentSales: saved.recentSales } : {}) } : s;
     }),
     suppliers: next.suppliers, orders, legacyOrders: [],
     draft: current.draft && linked(current.draft) ? current.draft : undefined,

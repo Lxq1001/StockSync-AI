@@ -34,6 +34,8 @@ export type StoreData = {
 export const MANAGER = 'Aina Rahman';
 export const MANAGER_EMAIL = 'aina.rahman@stocksync-demo.example';
 export const COVER_ALERT_DAYS = 7;
+export const REORDER_ON_HAND_THRESHOLD = 7;
+export const REORDER_DAYS = 30;
 export const STORE_KEY = 'stocksync-datasets-v1';
 export const RETIRED_STORE_KEYS = ['stocksync-demo-v1', 'stocksync-demo-v2'] as const;
 
@@ -56,18 +58,15 @@ export function estimatedCover(sku: SKU): number {
 export const isLowCover = (sku: SKU) => estimatedCover(sku) <= COVER_ALERT_DAYS;
 export const formatCover = (sku: SKU) => { const c = estimatedCover(sku); return Number.isFinite(c) ? `${c.toFixed(1)} days` : 'No recent use'; };
 
-/** Order enough to reach lead time + buffer + 7 days of cover, rounded up to a whole supplier batch. */
+/** At seven units on hand or less, suggest 30 days of average use. No stock subtraction or batch rounding. */
 export function suggestedQuantity(sku: SKU): number {
-  const target = sku.avgDailyDemand * (sku.leadTimeDays + sku.reorderBuffer + COVER_ALERT_DAYS);
-  const batch = Math.max(1, Math.round(sku.batchSize) || 1);
-  const need = Math.max(0, target - sku.onHand);
-  return Math.max(batch, Math.ceil(need / batch) * batch);
+  return sku.onHand <= REORDER_ON_HAND_THRESHOLD ? sku.avgDailyDemand * REORDER_DAYS : 0;
 }
 export type Suggestion = { sku: SKU; quantity: number; totalCost: number; cover: number };
-/** AI suggested tasks: strictly items with estimated cover <= 7 days that were not rejected. */
+/** Low on-hand stock with positive recent demand, excluding dismissed suggestions. */
 export function suggestions(data: StoreData): Suggestion[] {
   return data.skus
-    .filter(s => isLowCover(s) && !data.rejectedSuggestions.includes(s.id))
+    .filter(s => suggestedQuantity(s) > 0 && !data.rejectedSuggestions.includes(s.id))
     .map(sku => { const quantity = suggestedQuantity(sku); return { sku, quantity, totalCost: round2(quantity * sku.unitCost), cover: estimatedCover(sku) }; })
     .sort((a, b) => a.cover - b.cover);
 }
