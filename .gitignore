@@ -48,3 +48,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# RunPod
+.env
