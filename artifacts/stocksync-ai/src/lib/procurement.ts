@@ -1,4 +1,5 @@
-// Local, browser-only procurement helpers. No authentication, server or email provider is involved.
+// Browser-local procurement records. Actual sends are accepted by the server's Gmail transport.
+import type { EmailReceipt } from '@workspace/api-client-react';
 export type SKU = {
   id: string; name: string; category: string; onHand: number; unit: string;
   avgDailyDemand: number; leadTimeDays: number; reorderBuffer: number;
@@ -8,7 +9,7 @@ export type Supplier = { id: string; name: string; contactMethod: string; MOQ: n
 /** Tracked purchase-order statuses. Status changes are tracking only and never change stock. */
 export const ORDER_STATUSES = ['Sent', 'Pending Delivery', 'Received'] as const;
 export type OrderStatus = typeof ORDER_STATUSES[number];
-export type SimulatedSend = { to: string; from: string; subject: string; body: string; recordedAt: string; note: 'Demo only - no real email sent' | 'Sent from external mail app; confirmed by user' };
+export type SimulatedSend = { to: string; from: string; subject: string; body: string; recordedAt: string; note: 'Demo only - no real email sent' | 'Sent from external mail app; confirmed by user' | 'Real email accepted by Gmail'; receipt?: EmailReceipt };
 export type PurchaseOrder = {
   id: string; itemId: string; supplierId: string; quantity: number; unitCost: number;
   totalCost: number; status: OrderStatus; createdAt: string; depletionDays: number;
@@ -18,6 +19,7 @@ export type PurchaseOrder = {
 export type LegacyOrder = { id: string; itemId: string; supplierId: string; quantity: number; unitCost: number; totalCost: number; status: string; createdAt: string };
 export type AuditEntry = { id: string; timestamp: string; actor: string; action: string; details: string; orderId?: string; reference?: string };
 export type TemplateDraft = {
+  sendId?: string;
   itemId: string; supplierId: string; quantity: number; unitCost: number;
   to: string; from: string; subject: string; body: string; createdAt: string;
 };
@@ -114,7 +116,7 @@ export function buildDraft(data: StoreData, skuId: string, quantity: number): Te
   if (!Number.isSafeInteger(quantity) || quantity < 1) throw new Error('Order quantity must be a whole number of 1 or more.');
   const total = round2(quantity * sku.unitCost);
   return {
-    itemId: sku.id, supplierId: supplier.id, quantity, unitCost: sku.unitCost, createdAt: new Date().toISOString(),
+    sendId: uid(), itemId: sku.id, supplierId: supplier.id, quantity, unitCost: sku.unitCost, createdAt: new Date().toISOString(),
     to: supplierEmail(supplier), from: `${MANAGER} <${MANAGER_EMAIL}>`,
     subject: `Purchase order request: ${quantity} ${sku.unit} ${sku.name}`,
     body: `Hello ${supplier.name} team,\n\nWe would like to order the following for our store:\n\nItem: ${sku.name}\nQuantity: ${quantity} ${sku.unit}\nUnit price: ${formatMoney(sku.unitCost)} per ${sku.unit}\nTotal: ${formatMoney(total)}\n\nPlease confirm availability and your delivery date. Our usual lead time with you is ${supplier.leadTimeDays} day${supplier.leadTimeDays === 1 ? '' : 's'}.\n\nThank you,\n${MANAGER}\nStore manager`,
@@ -138,7 +140,7 @@ export function buildMailtoUrl(draft: Pick<TemplateDraft, 'to' | 'subject' | 'bo
   return `mailto:${draft.to.trim()}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`;
 }
 /** Records a user-confirmed external send and creates one Sent purchase order. Throws if there is no draft (prevents duplicates). */
-export function sendDraft(data: StoreData, edited: Pick<TemplateDraft, 'to' | 'from' | 'subject' | 'body'>, now = new Date().toISOString()): { data: StoreData; order: PurchaseOrder } {
+export function sendDraft(data: StoreData, edited: Pick<TemplateDraft, 'to' | 'from' | 'subject' | 'body'>, now = new Date().toISOString(), receipt?: EmailReceipt): { data: StoreData; order: PurchaseOrder } {
   const draft = data.draft;
   if (!draft) throw new Error('This draft was already sent or cleared. No new order was created.');
   const err = validateDraft(edited);
@@ -151,14 +153,14 @@ export function sendDraft(data: StoreData, edited: Pick<TemplateDraft, 'to' | 'f
     id, itemId: draft.itemId, supplierId: draft.supplierId, quantity: draft.quantity, unitCost: draft.unitCost,
     totalCost: round2(draft.quantity * draft.unitCost), status: 'Sent', createdAt: now,
     depletionDays: Number.isFinite(estimatedCover(sku)) ? round2(estimatedCover(sku)) : 0, approvedBy: MANAGER,
-    send: { to: edited.to.trim(), from: 'Not captured (external mail app)', subject: edited.subject.trim(), body: edited.body, recordedAt: now, note: 'Sent from external mail app; confirmed by user' },
+    send: { to: edited.to.trim(), from: receipt?.from ?? 'Not captured (external mail app)', subject: edited.subject.trim(), body: edited.body, recordedAt: now, note: receipt ? 'Real email accepted by Gmail' : 'Sent from external mail app; confirmed by user', ...(receipt ? { receipt } : {}) },
   };
   return {
     order,
     data: {
       ...data, draft: undefined, orders: [order, ...data.orders],
       rejectedSuggestions: data.rejectedSuggestions,
-      audit: [log('Email marked as sent', `${id} · ${draft.quantity} ${sku.unit} ${sku.name} · ${formatMoney(order.totalCost)} · to ${order.send!.to} · user confirmed sent from external mail app · status Sent`, id), ...data.audit],
+      audit: [log(receipt ? 'Email sent via Gmail' : 'Email marked as sent', `${id} · ${draft.quantity} ${sku.unit} ${sku.name} · ${formatMoney(order.totalCost)} · to ${order.send!.to} · ${receipt ? `Gmail accepted message ${receipt.messageId}; delivery not verified` : 'user confirmed sent from external mail app'} · status Sent`, id), ...data.audit],
     },
   };
 }

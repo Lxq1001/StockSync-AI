@@ -8,6 +8,51 @@
 import * as zod from 'zod';
 
 
+export const GetEmailSettingsResponse = zod.object({
+  "ready": zod.boolean(),
+  "sender": zod.string(),
+  "transport": zod.enum(['gmail', 'smtp']),
+  "reason": zod.string(),
+  "approvedSupplierIds": zod.array(zod.string())
+})
+
+
+export const sendOrderEmailBodySendIdMin = 16;
+export const sendOrderEmailBodySendIdMax = 150;
+
+export const sendOrderEmailBodyItemIdMax = 80;
+
+export const sendOrderEmailBodySupplierIdMax = 80;
+
+export const sendOrderEmailBodyQuantityMax = 1000000;
+
+export const sendOrderEmailBodyToMax = 254;
+
+export const sendOrderEmailBodySubjectMax = 200;
+
+export const sendOrderEmailBodyBodyMax = 5000;
+
+
+
+export const SendOrderEmailBody = zod.object({
+  "sendId": zod.string().min(sendOrderEmailBodySendIdMin).max(sendOrderEmailBodySendIdMax),
+  "itemId": zod.string().min(1).max(sendOrderEmailBodyItemIdMax),
+  "supplierId": zod.string().min(1).max(sendOrderEmailBodySupplierIdMax),
+  "quantity": zod.number().int().min(1).max(sendOrderEmailBodyQuantityMax),
+  "to": zod.string().email().max(sendOrderEmailBodyToMax),
+  "subject": zod.string().min(1).max(sendOrderEmailBodySubjectMax),
+  "body": zod.string().min(1).max(sendOrderEmailBodyBodyMax)
+})
+
+export const SendOrderEmailResponse = zod.object({
+  "sendId": zod.string(),
+  "messageId": zod.string(),
+  "from": zod.string(),
+  "acceptedAt": zod.string(),
+  "transport": zod.enum(['gmail', 'smtp'])
+})
+
+
 /**
  * @summary Supplied catalog, supplier contacts, and sales history
  */
