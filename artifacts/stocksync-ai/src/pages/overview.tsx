@@ -15,7 +15,7 @@ export function OverviewPage({ data, onImport }: PageProps & { onImport: () => v
       <Stat label="Inventory items" value={data.skus.length} foot={`Across ${data.suppliers.length} local suppliers`} icon={<Boxes />} />
     </div>
     <section className="modules-area">
-      <div className="panel-head bare"><div><div className="panel-title">Modules</div><div className="panel-meta">Open a workspace to act on stock or orders</div></div><Link href="/purchase-orders" className="inline-link" data-testid="link-view-all">View all <ArrowUpRight size={13} /></Link></div>
+      <div className="panel-head bare"><div><div className="panel-title">Modules</div></div><Link href="/purchase-orders" className="inline-link" data-testid="link-view-all">View all <ArrowUpRight size={13} /></Link></div>
       <div className="module-grid">
         <Link href="/inventory" className="module-block" data-testid="link-module-inventory">
           <div className="module-icon"><Boxes /></div>
@@ -32,11 +32,11 @@ export function OverviewPage({ data, onImport }: PageProps & { onImport: () => v
       </div>
     </section>
     <div className="dashboard-grid">
-      <section className="panel"><div className="panel-head"><div><div className="panel-title">Orders in motion</div><div className="panel-meta">Sent and pending delivery · status tracking only</div></div><Link href="/purchase-orders" className="inline-link" data-testid="link-view-order-status">Order status <ArrowUpRight size={13} /></Link></div>
+      <section className="panel"><div className="panel-head"><div><div className="panel-title">Orders in motion</div></div><Link href="/purchase-orders" className="inline-link" data-testid="link-view-order-status">Order status <ArrowUpRight size={13} /></Link></div>
         {inMotion.length ? <div className="order-list">{inMotion.slice(0, 5).map(o => <div className="order-row" key={o.id}><div><div className="item-name">{itemName(data, o.itemId)}</div><div className="item-detail">{o.id} · {supplierName(data, o.supplierId)}</div></div><div className="mono">{money(o.totalCost)}</div><div><span className={`pill ${o.status === 'Pending Delivery' ? 'delivery' : 'sent'}`}>{o.status}</span></div><div className="hide-small item-detail">{when(o.createdAt)}</div><div className="hide-small item-detail">{o.send ? 'Simulated send' : 'Sample order'}</div></div>)}</div>
           : <Empty title="No orders in motion" detail="Approve a suggested task in Inventory to draft and simulate a supplier email." />}
       </section>
-      <section className="panel"><div className="panel-head"><div><div className="panel-title">Stock to watch</div><div className="panel-meta">Based on recent average daily usage</div></div><Link href="/inventory" className="inline-link" data-testid="link-stock-watch">Inventory <ArrowUpRight size={13} /></Link></div>
+      <section className="panel"><div className="panel-head"><div><div className="panel-title">Stock to watch</div></div><Link href="/inventory" className="inline-link" data-testid="link-stock-watch">Inventory <ArrowUpRight size={13} /></Link></div>
         {atRisk.length ? <div className="risk-list">{atRisk.slice(0, 4).map(i => <div className="risk-row" key={i.id}><div className="risk-icon"><AlertTriangle /></div><div style={{ flex: 1 }}><div className="risk-name">{i.name}</div><div className="risk-detail">{i.onHand} {i.unit} left · approx. {estimatedCover(i).toFixed(1)} days at current use</div></div><div className="mono cover-low">{estimatedCover(i).toFixed(1)}d</div></div>)}</div>
           : <Empty title="Nothing at risk" detail="Every item has more than 7 days of estimated cover." />}
       </section>
