@@ -9,12 +9,7 @@ export function OverviewPage({ data, onImport }: PageProps & { onImport: () => v
   return <main className="content">
     <PageTitle title={`Good morning, ${MANAGER.split(' ')[0]}`}
       right={<button className="button primary" onClick={onImport} data-testid="button-import"><FileUp /> Import</button>} />
-    <div className="stats">
-      <Stat label="Sent / pending" value={inMotion.length} foot="Simulated emails, not yet received" icon={<Truck />} />
-      <Stat label="Inventory items" value={data.skus.length} foot={`Across ${data.suppliers.length} local suppliers`} icon={<Boxes />} />
-    </div>
     <section className="modules-area">
-      <div className="panel-head bare"><div><div className="panel-title">Modules</div></div><Link href="/purchase-orders" className="inline-link" data-testid="link-view-all">View all <ArrowUpRight size={13} /></Link></div>
       <div className="module-grid">
         <Link href="/inventory" className="module-block" data-testid="link-module-inventory">
           <div className="module-icon"><Boxes /></div>

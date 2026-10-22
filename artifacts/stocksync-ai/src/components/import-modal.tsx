@@ -34,7 +34,7 @@ export function ImportModal({ data, update, toast, onClose }: PageProps & { onCl
     if (update(d => applyImport(d, preview, MANAGER))) { toast(`Imported ${preview.rows} sales rows. Demand and cover recalculated; stock on hand unchanged.`); onClose(); }
   };
 
-  return <Modal title="Import sales transactions" copy="Recalculates recent daily demand from a local file. Nothing is uploaded." onClose={onClose} testId="modal-import" wide
+  return <Modal title="Import sales transactions" copy="Recalculates recent daily demand from a local file. " onClose={onClose} testId="modal-import" wide
     footer={<><button className="button" onClick={onClose} data-testid="button-cancel-import">Cancel</button><button className="button primary" disabled={!preview} onClick={apply} data-testid="button-apply-import">Apply import</button></>}>
     <div className="format-box" data-testid="text-import-formats">
       <b>Accepted formats only</b>
