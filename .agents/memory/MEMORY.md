@@ -1,1 +1,2 @@
 - [GitHub connector availability](github-connector-availability.md) — verify a callable connection after attachment; an “attached” result alone may not expose GitHub API access.
+- [Demo and production boundaries](demo-production-boundaries.md) — distinguish mock dispatch and browser activity from real supplier delivery and immutable audit guarantees.

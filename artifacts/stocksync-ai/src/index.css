@@ -90,6 +90,30 @@ h1{font-family:Manrope,sans-serif;font-size:28px;line-height:1.2;letter-spacing:
 .budget-settings{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border:1px solid #e8e3d7;background:#f7f4eb;border-radius:9px}
 .budget-settings input{width:110px;border:1px solid #dedacd;border-radius:7px;padding:8px;background:#fffdf8;font-family:var(--app-font-mono)}
 .bar{height:6px;background:#e8e6dc;border-radius:10px;overflow:hidden}.bar span{height:100%;display:block;background:#cf9a59}
+.row-actions{flex-wrap:wrap}
+.store-chip{cursor:pointer;color:inherit}
+.outcome-modal{width:min(920px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;margin:auto;padding:0;color:#27463d}
+.outcome-modal::backdrop{background:#172b26b8}
+.outcome-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.outcome-steps>div{display:flex;align-items:center;gap:6px;padding:10px;border:1px solid #cddfd3;border-radius:8px;background:#eaf1e8;font-size:11px;font-weight:700}
+.outcome-steps svg{flex-shrink:0;color:#31735c}
+.outcome-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.outcome-document,.outcome-message{min-width:0;border:1px solid #e1ddcf;border-radius:10px;padding:20px;background:#fffef9}
+.outcome-document h3{font:800 24px Manrope,sans-serif;margin-bottom:12px}
+.outcome-line{display:flex;justify-content:space-between;gap:14px;border-bottom:1px solid #e9e5da;padding:11px 0;font-size:12px}
+.outcome-line span:first-child{flex:1}
+.outcome-document .button{max-width:100%;font-size:11px;margin-top:10px;overflow-wrap:anywhere;white-space:normal}
+.outcome-note{white-space:pre-wrap;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.outcome-message .panel-title{display:flex;gap:7px;align-items:center}
+.outcome-meta{display:grid;grid-template-columns:66px 1fr;gap:9px;font-size:11px;line-height:1.5}
+.outcome-meta dt{font-weight:700}.outcome-meta dd{margin:0;overflow-wrap:anywhere}
+.mock-message{background:#edf1e7;border:1px solid #dce5d6;padding:13px;border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.6 var(--app-font-mono)}
+.outcome-reference{overflow-wrap:anywhere;font-family:var(--app-font-mono);font-size:9px}
+.outcome-audit{border-top:1px solid #e5e0d4;padding-top:17px}
+.outcome-audit ol{padding-left:20px;margin:12px 0 0;display:grid;gap:10px}
+.outcome-audit li{font-size:11px}.outcome-audit li span{display:block;color:#78867f;font-size:10px;margin-top:3px}
+.outcome-error{font-size:12px;color:#a34535}
+@media(max-width:680px){.outcome-grid{grid-template-columns:1fr}.outcome-steps{grid-template-columns:1fr 1fr}.outcome-modal .modal-body{padding:16px}.outcome-modal .modal-head{padding:16px}.outcome-document,.outcome-message{padding:16px}}
 @keyframes appear{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:900px){.sidebar{width:205px;flex-basis:205px}.content{padding:28px 24px}.order-row{grid-template-columns:1fr 100px 85px auto}.order-row .hide-small{display:none}.stats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:680px){.app-shell{display:block}.sidebar{width:100%;min-height:unset;padding:12px 14px;display:flex;flex-direction:row;align-items:center;gap:12px}.brand{margin:0;padding:0}.brand-sub,.nav-caption,.side-bottom{display:none}.brand-name{font-size:15px}.brand-mark{width:30px;height:30px}.nav-list{display:flex;overflow:auto;gap:3px}.nav-link{padding:9px;border-radius:8px;font-size:0}.nav-link svg{width:18px;height:18px}.topbar{height:52px;padding:0 16px}.content{padding:25px 15px 42px}.page-heading{flex-direction:column;margin-bottom:20px}h1{font-size:25px}.stats{gap:8px}.stat{padding:13px}.stat-value{font-size:22px}.dashboard-grid{grid-template-columns:1fr}.order-row{grid-template-columns:minmax(125px,1fr) 78px auto;gap:8px;padding:13px}.order-row .hide-small{display:none}.order-row .row-actions{grid-column:1/-1;justify-content:flex-start}.activity-row{grid-template-columns:95px 1fr;gap:9px;padding:14px}.activity-row .activity-action{grid-column:2}.activity-row .activity-detail{grid-column:2}.toolbar{margin-top:15px}.searchbox{min-width:100%;}.store-chip{font-size:10px;padding:6px}.modal{max-height:90dvh;overflow:auto}}
