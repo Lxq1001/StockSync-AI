@@ -2,9 +2,9 @@ import { useRef, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Boxes, Pencil, Send, Trash2 } from 'lucide-react';
 import { Empty, FormError, PageTitle, type PageProps } from '@/components/common';
-import { buildMailtoUrl, sendDraft, setDraft, validateDraft, type TemplateDraft } from '@/lib/procurement';
+import { buildGmailComposeUrl, sendDraft, setDraft, validateDraft, type TemplateDraft } from '@/lib/procurement';
 
-type Field = 'to' | 'from' | 'subject' | 'body';
+type Field = 'to' | 'subject' | 'body';
 
 export function TemplatePage({ data, update, toast }: PageProps) {
   const [, navigate] = useLocation();
@@ -25,7 +25,9 @@ export function TemplatePage({ data, update, toast }: PageProps) {
   const openEmailApp = () => {
     const problem = validateDraft(draft);
     if (problem) { setError(problem); setEditing(true); return; }
-    window.location.href = buildMailtoUrl(draft);
+    const gmailWindow = window.open(buildGmailComposeUrl(draft), '_blank');
+    if (gmailWindow) gmailWindow.opener = null;
+    else window.location.assign(buildGmailComposeUrl(draft));
   };
   const markSent = () => {
     if (sendingRef.current) return;
@@ -50,7 +52,7 @@ export function TemplatePage({ data, update, toast }: PageProps) {
       <textarea className="mail-body" value={draft.body} readOnly={ro} onChange={e => setField('body', e.target.value)} aria-label="Content" rows={16} data-testid="input-mail-body" />
       <FormError message={error} />
       <div className="mail-actions">
-        <button className="button primary" onClick={openEmailApp} disabled={sending} data-testid="button-send-email"><Send /> Open email app</button>
+        <button className="button primary" onClick={openEmailApp} disabled={sending} data-testid="button-send-email"><Send /> Open Gmail draft</button>
         <button className="button" onClick={markSent} disabled={sending} data-testid="button-mark-sent">{sending ? 'Recording...' : 'I sent it — create order'}</button>
         <button className="button" onClick={() => setEditing(e => !e)} aria-pressed={editing} disabled={sending} data-testid="button-edit-email"><Pencil /> {editing ? 'Done editing' : 'Edit'}</button>
         <button className="button small danger push" onClick={discard} disabled={sending} data-testid="button-discard-draft"><Trash2 /> Discard</button>

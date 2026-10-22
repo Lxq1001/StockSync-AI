@@ -1,6 +1,6 @@
 # StockSync AI
 
-A browser-local procurement demo for reviewing stock risk, opening prefilled supplier emails in the user's mail app, and tracking purchase orders.
+A browser-local procurement demo for reviewing stock risk, opening prefilled supplier emails in Gmail, and tracking purchase orders.
 
 ## Run & Operate
 
@@ -41,7 +41,7 @@ A browser-local procurement demo for reviewing stock risk, opening prefilled sup
 ## Product
 
 - Inventory suggestions and edits, sales-file import, an email-template workflow, purchase-order tracking, and an Activity Log.
-- Data is stored in this browser, not shared across users. “Open email app” hands a prefilled draft to the user's default mail app. The user must send it there and separately confirm in StockSync; the app cannot verify external delivery. Other send records may be simulated.
+- Data is stored in this browser, not shared across users. “Open Gmail draft” opens a prefilled Gmail compose page; users must be signed into Gmail, send the message there, and separately confirm in StockSync. The app cannot verify external delivery. Other send records may be simulated.
 
 ## User preferences
 

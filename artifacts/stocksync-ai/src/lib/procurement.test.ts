@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  buildDraft, buildMailtoUrl, editItem, initialData, LEGACY_KEY, loadStore, migrateV1, rejectSuggestion, saveStore, sendDraft,
+  buildDraft, buildGmailComposeUrl, editItem, initialData, LEGACY_KEY, loadStore, migrateV1, rejectSuggestion, saveStore, sendDraft,
   setDraft, setOrderStatus, STORE_KEY, suggestions, validateItemEdit, type StoreData,
 } from './procurement';
 import { applyImport, parseCsv, parseSalesFile, previewImport, sampleCsv } from './sales-import';
@@ -52,10 +52,15 @@ test('email closing uses Thank you for new and previously saved drafts', () => {
   assert.equal(loaded.draft?.body, draft.body);
 });
 
-test('mailto link carries the editable recipient, subject, and complete encoded body', () => {
+test('Gmail compose URL carries the editable recipient, subject, and complete body', () => {
   const draft = buildDraft(initialData(), 'sku-002', 30);
-  const url = buildMailtoUrl({ ...draft, to: 'buyer@example.com', subject: 'Order & delivery', body: 'Hello team,\nPlease confirm.' });
-  assert.equal(url, 'mailto:buyer@example.com?subject=Order%20%26%20delivery&body=Hello%20team%2C%0APlease%20confirm.');
+  const url = new URL(buildGmailComposeUrl({ ...draft, to: 'buyer@example.com', subject: 'Order & delivery', body: 'Hello team,\nPlease confirm.' }));
+  assert.equal(url.origin + url.pathname, 'https://mail.google.com/mail/');
+  assert.equal(url.searchParams.get('view'), 'cm');
+  assert.equal(url.searchParams.get('fs'), '1');
+  assert.equal(url.searchParams.get('to'), 'buyer@example.com');
+  assert.equal(url.searchParams.get('su'), 'Order & delivery');
+  assert.equal(url.searchParams.get('body'), 'Hello team,\nPlease confirm.');
 });
 
 test('draft persists, send creates exactly one Sent order and blocks duplicates', () => {

@@ -155,9 +155,16 @@ export function validateDraft(d: Pick<TemplateDraft, 'to' | 'from' | 'subject' |
   if (d.body.length > 5000) return 'Content must be 5,000 characters or fewer.';
   return null;
 }
-/** Builds a prefilled email-app handoff; the app cannot verify whether the user sends it. */
-export function buildMailtoUrl(draft: Pick<TemplateDraft, 'to' | 'subject' | 'body'>): string {
-  return `mailto:${draft.to.trim()}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`;
+/** Builds a prefilled Gmail compose URL; the app cannot verify whether the user sends it. */
+export function buildGmailComposeUrl(draft: Pick<TemplateDraft, 'to' | 'subject' | 'body'>): string {
+  const params = new URLSearchParams({
+    view: 'cm',
+    fs: '1',
+    to: draft.to.trim(),
+    su: draft.subject,
+    body: draft.body,
+  });
+  return `https://mail.google.com/mail/?${params.toString()}`;
 }
 /** Records a user-confirmed external send and creates one Sent purchase order. Throws if there is no draft (prevents duplicates). */
 export function sendDraft(data: StoreData, edited: Pick<TemplateDraft, 'to' | 'from' | 'subject' | 'body'>, now = new Date().toISOString()): { data: StoreData; order: PurchaseOrder } {
