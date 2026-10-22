@@ -51,7 +51,7 @@ export function InventoryPage({ data, update, toast, startDraft }: PageProps & {
     <div className="panel"><div className="table-wrap"><table className="data-table"><thead><tr><th>Item</th><th>On hand</th><th>Average use</th><th>Estimated cover</th><th>Unit cost</th><th>Action</th></tr></thead><tbody>
       {filtered.map(i => { const low = isLowCover(i); return <tr key={i.id} data-testid={`row-inventory-${i.id}`}>
         <td><div className="item-name">{i.name}</div><div className="item-detail">{i.category} · {supplierName(data, i.supplierId)}</div></td>
-        <td><b>{i.onHand}</b> {i.unit}<div className="stock-meter"><span className={low ? 'low' : ''} style={{ width: `${Math.min(100, ((Number.isFinite(estimatedCover(i)) ? estimatedCover(i) : 14) / 14) * 100)}%` }} /></div></td>
+        <td><b>{i.onHand}</b></td>
         <td>{i.avgDailyDemand} {i.unit}/day</td>
         <td><span className={`forecast ${low ? 'cover-low' : ''}`} data-testid={`text-cover-${i.id}`}>{formatCover(i)}</span></td>
         <td>{money(i.unitCost)}/{i.unit}</td>
