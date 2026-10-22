@@ -1,0 +1,404 @@
+[
+  { "sales_id": "1",
+    "items": [
+      {
+        "id": "SKU4",
+        "quantity": 1.0
+      },
+      {
+        "id": "SKU7",
+        "quantity": 1.0
+      }
+    ],
+    "orderDate": "Mon Oct 12 2026"
+  },
+
+  { "sales_id": "2",
+    "items":
+      {
+        "id": "SKU1",
+        "quantity": 2.0
+      },
+    "orderDate": "Mon Oct 12 2026"
+  },
+
+  { "sales_id": "3",
+    "items": [
+      {
+        "id": "SKU9",
+        "quantity": 1.0
+      },
+      {
+        "id": "SKU4",
+        "quantity": 1.0
+      },
+      {
+        "id": "SKU3",
+        "quantity": 1.0
+    }
+    ],
+    "orderDate": "Mon Oct 12 2026"
+  },
+
+  { "sales_id": "4",
+    "items":
+      {
+        "id": "SKU7",
+        "quantity": 2.0
+      },
+    "orderDate": "Mon Oct 12 2026"
+   },
+
+  { "sales_id": "5",
+    "items":
+      {
+        "id": "SKU8",
+        "quantity": 2.0
+      },
+    "orderDate": "Mon Oct 12 2026"
+   },
+
+  { "sales_id": "6",
+    "items":
+      {
+        "id": "SKU15",
+        "quantity": 1.0
+      },
+    "orderDate": "Tue Oct 13 2026"
+   },
+
+  { "sales_id": "7",
+    "items": [
+      {
+        "id": "SKU14",
+        "quantity": 1.0
+      },
+      {
+        "id": "SKU7",
+        "quantity": 1.0
+      }
+    ],
+    "orderDate": "Tue Oct 13 2026"
+  },
+
+  { "sales_id": "8",
+    "items": [
+      {
+        "id": "SKU10",
+        "quantity": 1.0
+      },
+      {
+        "id": "SKU11",
+        "quantity": 1.0
+      }
+    ],
+    "orderDate": "Tue Oct 13 2026"
+  },
+
+ { "sales_id": "9",
+    "items": [
+      {
+        "id": "SKU13",
+        "quantity": 1.0
+      },
+      {
+        "id": "SKU15",
+        "quantity": 2.0
+      }
+    ],
+    "orderDate": "Tue Oct 13 2026"
+  },
+
+  { "sales_id": "10",
+    "items": [
+      {
+        "id": "SKU4",
+        "quantity": 1.0
+      },
+      {
+        "id": "SKU7",
+        "quantity": 3.0
+      }
+    ],
+    "orderDate": "Wed Oct 14 2026"
+  },
+
+  { "sales_id": "11",
+    "items":
+      {
+        "id": "SKU12",
+        "quantity": 1.0
+      },
+    "orderDate": "Wed Oct 14 2026"
+   },
+
+  { "sales_id": "12",
+    "items": [
+      {
+        "id": "SKU5",
+        "quantity": 2.0
+      },
+      {
+        "id": "SKU6",
+        "quantity": 1.0
+      },
+      {
+        "id": "SKU7",
+        "quantity": 2.0
+    }
+    ],
+    "orderDate": "Wed Oct 14 2026"
+  },
+
+  { "sales_id": "13",
+    "items":[
+      {
+        "id": "SKU10",
+        "quantity": 2.0
+      },
+      {
+        "id": "SKU9",
+        "quantity": 2.0
+      }
+    ],
+    "orderDate": "Wed Oct 14 2026"
+   },
+
+  { "sales_id": "14",
+    "items":
+      {
+        "id": "SKU3",
+        "quantity": 2.0
+      },
+    "orderDate": "Wed Oct 14 2026"
+   },
+
+  { "sales_id": "15",
+    "items":
+      {
+        "id": "SKU6",
+        "quantity": 1.0
+      },
+    "orderDate": "Thu Oct 15 2026"
+   },
+
+  { "sales_id": "16",
+    "items": [
+      {
+        "id": "SKU11",
+        "quantity": 3.0
+      },
+      {
+        "id": "SKU8",
+        "quantity": 2.0
+      }
+    ],
+    "orderDate": "Thu Oct 15 2026"
+  },
+
+  { "sales_id": "17",
+    "items": [
+      {
+        "id": "SKU15",
+        "quantity": 3.0
+      },
+      {
+        "id": "SKU1",
+        "quantity": 2.0
+      }
+    ],
+    "orderDate": "Thu Oct 15 2026"
+  },
+
+ { "sales_id": "18",
+    "items": [
+      {
+        "id": "SKU13",
+        "quantity": 1.0
+      },
+      {
+        "id": "SKU11",
+        "quantity": 2.0
+      }
+    ],
+    "orderDate": "Thu Oct 15 2026"
+  },
+
+  { "sales_id": "19",
+    "items": [
+      {
+        "id": "SKU10",
+        "quantity": 1.0
+      },
+      {
+        "id": "SKU6",
+        "quantity": 1.0
+      }
+    ],
+    "orderDate": "Fri Oct 16 2026"
+  },
+
+  { "sales_id": "20",
+    "items":
+      {
+        "id": "SKU3",
+        "quantity": 1.0
+      },
+    "orderDate": "Fri Oct 16 2026"
+   },
+
+  { "sales_id": "21",
+    "items":
+      {
+        "id": "SKU9",
+        "quantity": 1.0
+      },
+    "orderDate": "Fri Oct 16 2026"
+  },
+
+  { "sales_id": "22",
+    "items":
+      {
+        "id": "SKU1",
+        "quantity": 2.0
+      },
+    "orderDate": "Fri Oct 16 2026"
+   },
+
+  { "sales_id": "23",
+    "items":
+      {
+        "id": "SKU7",
+        "quantity": 2.0
+      },
+    "orderDate": "Fri Oct 16 2026"
+   },
+
+  { "sales_id": "24",
+    "items":
+      {
+        "id": "SKU15",
+        "quantity": 1.0
+      },
+    "orderDate": "Sat Oct 17 2026"
+   },
+
+  { "sales_id": "25",
+    "items": [
+      {
+        "id": "SKU14",
+        "quantity": 1.0
+      },
+      {
+        "id": "SKU7",
+        "quantity": 1.0
+      }
+    ],
+    "orderDate": "Sat Oct 17 2026"
+  },
+
+  { "sales_id": "26",
+    "items": [
+      {
+        "id": "SKU11",
+        "quantity": 1.0
+      },
+      {
+        "id": "SKU11",
+        "quantity": 1.0
+      }
+    ],
+    "orderDate": "Sat Oct 17 2026"
+  },
+
+ { "sales_id": "27",
+    "items": [
+      {
+        "id": "SKU13",
+        "quantity": 1.0
+      },
+      {
+        "id": "SKU15",
+        "quantity": 2.0
+      }
+    ],
+    "orderDate": "Sat Oct 17 2026"
+  },
+
+  { "sales_id": "28",
+    "items": [
+      {
+        "id": "SKU9",
+        "quantity": 3.0
+      },
+      {
+        "id": "SKU7",
+        "quantity": 2.0
+      }
+    ],
+    "orderDate": "Sat Oct 17 2026"
+  },
+
+  { "sales_id": "29",
+    "items":
+      {
+        "id": "SKU1",
+        "quantity": 2.0
+      },
+    "orderDate": "Sun Oct 18 2026"
+   },
+
+  { "sales_id": "30",
+    "items": [
+      {
+        "id": "SKU12",
+        "quantity": 3.0
+      },
+      {
+        "id": "SKU15",
+        "quantity": 1.0
+      },
+      {
+        "id": "SKU3",
+        "quantity": 1.0
+    }
+    ],
+    "orderDate": "Sun Oct 18 2026"
+  },
+
+  { "sales_id": "31",
+    "items":
+      {
+        "id": "SKU8",
+        "quantity": 3.0
+      },
+    "orderDate": "Sun Oct 18 2026"
+   },
+
+  { "sales_id": "32",
+    "items":
+      {
+        "id": "SKU6",
+        "quantity": 2.0
+      },
+    "orderDate": "Sun Oct 18 2026"
+   },
+
+  { "sales_id": "33",
+    "items": [
+      {
+        "id": "SKU1",
+        "quantity": 3.0
+      },
+      {
+        "id": "SKU2",
+        "quantity": 1.0
+      },
+      {
+        "id": "SKU3",
+        "quantity": 1.0
+    }
+    ],
+    "orderDate": "Sun Oct 18 2026"
+  }
+]
