@@ -15,9 +15,9 @@ export function InventoryPage({ data, update, toast, startDraft }: PageProps & {
   const reject = (id: string, name: string) => { if (update(d => rejectSuggestion(d, id))) toast(`Suggestion for ${name} rejected. It stays dismissed until you reset the demo.`); };
 
   return <main className="content">
-    <PageTitle title="Inventory" right={<span className="pill delivery">Synthetic sales data</span>} />
+    <PageTitle title="Inventory" />
     <section className="panel ai-tasks" data-testid="panel-ai-tasks">
-      <div className="panel-head"><div><div className="panel-title"><Sparkles size={15} /> AI suggested tasks</div><div className="panel-meta">Items with estimated cover of 7 days or less · you decide every order</div></div><span className="pill">{tasks.length} open</span></div>
+      <div className="panel-head"><div><div className="panel-title"><Sparkles size={15} /> AI suggested tasks</div><div className="panel-meta">Items with estimated cover of 7 days or less · you decide every order</div></div></div>
       {tasks.length ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Item</th><th>Suggested qty</th><th>Total cost</th><th>Cover</th><th>Action</th></tr></thead><tbody>
         {tasks.map(t => <tr key={t.sku.id} data-testid={`row-task-${t.sku.id}`}>
           <td><div className="item-name">{t.sku.name}</div><div className="item-detail">{supplierName(data, t.sku.supplierId)}</div></td>
@@ -27,7 +27,6 @@ export function InventoryPage({ data, update, toast, startDraft }: PageProps & {
         </tr>)}</tbody></table></div>
         : <Empty title="No suggested tasks" detail="Every item has more than 7 days of cover, or remaining suggestions were rejected." />}
     </section>
-    <div className="warning" style={{ marginTop: 17 }}><AlertTriangle /><span>Forecasts are directional estimates, not guarantees. Demand uses recent average daily sales; actual usage, deliveries and supplier availability can vary.</span></div>
     <div className="stats" style={{ marginTop: 16 }}><Stat label="Tracked items" value={data.skus.length} foot="Across dry, chilled & fresh goods" icon={<Package />} /><Stat label="7 days or less" value={data.skus.filter(isLowCover).length} foot="Estimated cover at risk" icon={<AlertTriangle />} /><Stat label="Est. on-hand value" value={money(data.skus.reduce((s, i) => s + i.onHand * i.unitCost, 0))} foot="Indicative MYR inventory cost" icon={<CircleDollarSign />} /><Stat label="Suppliers" value={data.suppliers.length} foot="Malaysian wholesale partners" icon={<Store />} /></div>
     <div className="toolbar"><label className="searchbox"><Search /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search stock or category" data-testid="input-inventory-search" /></label><select className="select" value={category} onChange={e => setCategory(e.target.value)} aria-label="Filter category" data-testid="select-inventory-category">{categories.map(c => <option key={c}>{c}</option>)}</select><select className="select" value={sort} onChange={e => setSort(e.target.value)} aria-label="Sort inventory" data-testid="select-inventory-sort"><option value="risk">Sort: depletion risk</option><option value="name">Sort: name A-Z</option></select></div>
     <div className="panel"><div className="table-wrap"><table className="data-table"><thead><tr><th>Item</th><th>On hand</th><th>Average use</th><th>Estimated cover</th><th>Unit cost</th><th>Action</th></tr></thead><tbody>
