@@ -15,6 +15,12 @@ The user subsequently requested connecting each user's own Google account from t
 
 **How to apply:** Use Google's hosted sign-in and Gmail sending consent, never a StockSync form collecting Google passwords. Keep account connection separate from a full website signup system unless requested. Preserve the existing working shared mode until a replacement is deliberately enabled, but never silently fall back to the shared mailbox after a personal-account authorization or send failure.
 
+Owner-facing Google OAuth setup instructions use `/api/google/callback` as the callback path, with the Replit development origin and the local gateway origin (`http://localhost:3000`) registered separately.
+
+**Why:** Google requires an exact match with the redirect URIs the owner registers outside the repository. Switching callback paths later requires coordinating that external configuration.
+
+**How to apply:** Match this contract when implementing account connection; do not substitute a different callback path without updating the Google Cloud instructions. Obtain any published origin from deployment configuration, not from the development domain.
+
 No-login sending is for localhost/private trusted-staff access, not an unrestricted public sending service. Server recipient approval and sending limits reduce abuse but do not authenticate visitors.
 
 **Why:** Every visitor otherwise acts through the owner's mailbox. Supplier catalog entries are not, by themselves, permission to email those addresses.
