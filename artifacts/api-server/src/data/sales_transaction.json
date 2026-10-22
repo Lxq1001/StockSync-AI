@@ -3,336 +3,273 @@
     "items":[
       {
         "id": "SKU1",
-        "price": 9.50,
         "quantity": 1.0
       },
       {
         "id": "SKU5",
-        "price": 10.00,
         "quantity": 2.0
       }
     ],
-    "total amount": 29.50,
-    "orderDate": "Mon Oct 5 13:36:54 GMT+08:00 2026"
+    "orderDate": "Mon Oct 5 2026"
   },
   { "sales_id": "2",
     "items": [
       {
         "id": "SKU1",
-        "price": 9.50,
         "quantity": 5.0
       },
       {
         "id": "SKU8",
-        "price": 7.50,
         "quantity": 3.0
       }
     ],
-    "total amount": 70.00,
-    "orderDate": "Mon Oct 5 14:36:54 GMT+08:00 2026"
+    "orderDate": "Mon Oct 5 2026"
   },
   { "sales_id": "3",
     "items": [
       {
         "id": "SKU2",
-        "price": 12.00,
         "quantity": 3.0
       },
       {
         "id": "SKU10",
-        "price": 9.00,
         "quantity": 1.0
       }
     ],
-    "total amount": 45.00,
-    "orderDate": "Mon Oct 5 15:36:54 GMT+08:00 2026"
+    "orderDate": "Mon Oct 5 2026"
   },
   { "sales_id": "4",
     "items": [
       {
         "id": "SKU7",
-        "price": 6.00,
         "quantity": 2.0
       },
       {
         "id": "SKU15",
-        "price": 8.00,
         "quantity": 3.0
       }
     ],
-    "total amount": 36.00,
-    "orderDate": "Tue Oct 6 14:36:54 GMT+08:00 2026"
+    "orderDate": "Tue Oct 6 2026"
   },
   { "sales_id": "5",
     "items": [
       {
         "id": "SKU2",
-        "price": 12.00,
         "quantity": 1.0
       },
       {
         "id": "SKU13",
-        "price": 14.00,
         "quantity": 3.0
       }
     ],
-    "total amount": 54.00,
-    "orderDate": "Tue Oct 6 15:36:54 GMT+08:00 2026"
+    "orderDate": "Tue Oct 6 2026"
   },
   { "sales_id": "6",
     "items": [
       {
         "id": "SKU7",
-        "price": 6.00,
         "quantity": 2.0
       },
       {
         "id": "SKU11",
-        "price": 9.00,
         "quantity": 2.0
       }
     ],
-    "total amount": 30.00,
-    "orderDate": "Wed Oct 7 13:36:54 GMT+08:00 2026"
+    "orderDate": "Wed Oct 7 2026"
   },
   { "sales_id": "7",
     "items": [
       {
         "id": "SKU4",
-        "price": 14.00,
         "quantity": 1.0
       },
       {
         "id": "SKU9",
-        "price": 5.50,
         "quantity": 6.0
       }
     ],
-    "total amount": 47.00,
-    "orderDate": "Wed Oct 7 14:36:54 GMT+08:00 2026"
+    "orderDate": "Wed Oct 7 2026"
   },
   { "sales_id": "8",
     "items": [
       {
         "id": "SKU1",
-        "price": 9.50,
         "quantity": 5.0
       },
       {
         "id": "SKU6",
-        "price": 32.00,
         "quantity": 1.0
       }
     ],
-    "total amount": 79.50,
-    "orderDate": "Wed Oct 7 15:36:54 GMT+08:00 2026"
+    "orderDate": "Wed Oct 7 2026"
   },
   { "sales_id": "9",
     "items": [
       {
         "id": "SKU7",
-        "price": 6.00,
         "quantity": 2.0
       },
       {
         "id": "SKU11",
-        "price": 9.00,
         "quantity": 2.0
       }
     ],
-    "total amount": 30.00,
-    "orderDate": "Thu Oct 8 12:36:54 GMT+08:00 2026"
+    "orderDate": "Thu Oct 8 2026"
   },
   { "sales_id": "10",
     "items": [
       {
         "id": "SKU1",
-        "price": 9.50,
         "quantity": 4.0
       },
       {
         "id": "SKU2",
-        "price": 12.00,
         "quantity": 2.0
       }
     ],
-    "total amount": 62.00,
-    "orderDate": "Thu Oct 8 13:36:54 GMT+08:00 2026"
+    "orderDate": "Thu Oct 8 2026"
   },
   { "sales_id": "11",
     "items": [
       {
         "id": "SKU5",
-        "price": 10.00,
         "quantity": 1.0
       },
       {
         "id": "SKU10",
-        "price": 9.00,
         "quantity": 3.0
       }
     ],
-    "total amount": 37.00,
-    "orderDate": "Thu Oct 8 14:36:54 GMT+08:00 2026"
+    "orderDate": "Thu Oct 8 2026"
   },
   { "sales_id": "12",
     "items": [
       {
         "id": "SKU7",
-        "price": 6.00,
         "quantity": 1.0
       },
       {
         "id": "SKU11",
-        "price": 9.00,
         "quantity": 4.0
       }
     ],
-    "total amount": 42.00,
-    "orderDate": "Fri Oct 9 11:36:54 GMT+08:00 2026"
+    "orderDate": "Fri Oct 9 2026"
   },
   { "sales_id": "13",
     "items": [
       {
         "id": "SKU13",
-        "price": 14.00,
         "quantity": 2.0
       },
       {
         "id": "SKU15",
-        "price": 8.00,
         "quantity": 1.0
       }
     ],
-    "total amount": 36.00,
-    "orderDate": "Fri Oct 9 13:36:54 GMT+08:00 2026"
+    "orderDate": "Fri Oct 9 2026"
   },
   { "sales_id": "14",
     "items": [
       {
         "id": "SKU3",
-        "price": 8.50,
         "quantity": 2.0
       },
       {
         "id": "SKU8",
-        "price":7.50,
         "quantity": 4.0
       }
     ],
-    "total amount": 47.00,
-    "orderDate": "Fri Oct 9 15:36:54 GMT+08:00 2026"
+    "orderDate": "Fri Oct 9 2026"
   },
   { "sales_id": "15",
     "items": [
       {
         "id": "SKU7",
-        "price": 6.00,
         "quantity": 1.0
       },
       {
         "id": "SKU9",
-        "price": 5.50,
         "quantity": 3.0
       }
     ],
-    "total amount": 22.50,
-    "orderDate": "Sat Oct 10 13:36:54 GMT+08:00 2026"
+    "orderDate": "Sat Oct 10 2026"
   },
   { "sales_id": "16",
     "items": [
       {
         "id": "SKU2",
-        "price": 12.00,
         "quantity": 1.0
       },
       {
         "id": "SKU8",
-        "price": 7.50,
         "quantity": 4.0
       }
     ],
-    "total amount": 42.00,
-    "orderDate": "Sat Oct 10 14:36:54 GMT+08:00 2026"
+    "orderDate": "Sat Oct 10 2026"
   },
   { "sales_id": "17",
     "items": [
       {
         "id": "SKU3",
-        "price": 8.50,
         "quantity": 2.0
       },
       {
         "id": "SKU7",
-        "price": 6.00,
         "quantity": 2.0
       }
     ],
-    "total amount": 29.00,
-    "orderDate": "Sat Oct 10 15:36:54 GMT+08:00 2026"
+    "orderDate": "Sat Oct 10 2026"
   },
   { "sales_id": "18",
     "items": [
       {
         "id": "SKU5",
-        "price": 10.00,
         "quantity": 1.0
       },
       {
         "id": "SKU11",
-        "price": 9.00,
         "quantity": 1.0
       }
     ],
-    "total amount": 19.00,
-    "orderDate": "Sun Oct 11 12:36:54 GMT+08:00 2026"
+    "orderDate": "Sun Oct 11 2026"
   },
   { "sales_id": "19",
     "items": [
       {
         "id": "SKU12",
-        "price": 20.00,
         "quantity": 1.0
       },
       {
         "id": "SKU13",
-        "price": 14.00,
         "quantity": 2.0
       }
     ],
-    "total amount": 48.00,
-    "orderDate": "Sun Oct 11 13:36:54 GMT+08:00 2026"
+    "orderDate": "Sun Oct 11 2026"
   },
   { "sales_id": "20",
     "items": [
       {
         "id": "SKU2",
-        "price": 12.00,
         "quantity": 3.0
       },
       {
         "id": "SKU11",
-        "price": 9.00,
         "quantity": 2.0
       }
     ],
-    "total amount": 54.00,
-    "orderDate": "Sun Oct 11 14:36:54 GMT+08:00 2026"
+    "orderDate": "Sun Oct 11 2026"
   },
   { "sales_id": "21",
     "items": [
       {
         "id": "SKU1",
-        "price": 9.50,
         "quantity": 4.0
       },
       {
         "id": "SKU15",
-        "price": 8.00,
         "quantity": 3.0
       }
     ],
-    "total amount": 62.00,
-    "orderDate": "Sun Oct 11 15:36:54 GMT+08:00 2026"
+    "orderDate": "Sun Oct 11 2026"
   }
 ]

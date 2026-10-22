@@ -1,6 +1,6 @@
 [
   {
-    "item_id": "SKU1",
+    "id": "SKU1",
     "name": "Fresh Milk (1L)",
     "category": "Dairy & Refrigerated",
     "stock": 10,
@@ -8,7 +8,7 @@
     "supplier_id": "S1"
   },
   {
-    "item_id": "SKU2",
+    "id": "SKU2",
     "name": "Butter (250G)",
     "category": "Dairy & Refrigerated",
     "stock": 8,
@@ -16,7 +16,7 @@
     "supplier_id": "S1"
   },
   {
-    "item_id": "SKU3",
+    "id": "SKU3",
     "name": "Eggs (10 pcs)",
     "category": "Dairy & Refrigerated",
     "stock": 3,
@@ -24,7 +24,7 @@
     "supplier_id": "S1"
   },
   {
-    "item_id": "SKU4",
+    "id": "SKU4",
     "name": "Cheese (200G)",
     "category": "Dairy & Refrigerated",
     "stock": 5,
@@ -32,7 +32,7 @@
     "supplier_id": "S1"
   },
   {
-    "item_id": "SKU5",
+    "id": "SKU5",
     "name": "Yogurt (500G)",
     "category": "Dairy & Refrigerated",
     "stock": 18,
@@ -40,7 +40,7 @@
     "supplier_id": "S1"
   },
   {
-    "item_id": "SKU6",
+    "id": "SKU6",
     "name": "Rice (5KG)",
     "category": "Staples & Grains",
     "stock": 7,
@@ -48,7 +48,7 @@
     "supplier_id": "S2"
   },
   {
-    "item_id": "SKU7",
+    "id": "SKU7",
     "name": "Bread (400g)",
     "category": "Staples & Grains",
     "stock": 6,
@@ -56,7 +56,7 @@
     "supplier_id": "S2"
   },
  {
-    "item_id": "SKU8",
+    "id": "SKU8",
     "name": "Instant Noodles (5 PACK)",
     "category": "Staples & Grains",
     "stock": 45,
@@ -64,7 +64,7 @@
     "supplier_id": "S2"
  },
  {
-    "item_id": "SKU9",
+    "id": "SKU9",
     "name": "Flour (1KG)",
     "category": "Staples & Grains",
     "stock": 18,
@@ -72,7 +72,7 @@
     "supplier_id": "S2"
  },
  {
-    "item_id": "SKU10",
+    "id": "SKU10",
     "name": "Cooking Oil (1KG)",
     "category": "Staples & Grains",
     "stock": 8,
@@ -80,7 +80,7 @@
     "supplier_id": "S2"
  },
  {
-    "item_id": "SKU11",
+    "id": "SKU11",
     "name": "Toothpaste (150G)",
     "category": "Personal & Household Care",
     "stock":55,
@@ -88,7 +88,7 @@
     "supplier_id": "S3"
  },
  {
-    "item_id": "SKU12",
+    "id": "SKU12",
     "name": "Shampoo (650ML)",
     "category": "Personal & Household Care",
     "stock":17,
@@ -96,7 +96,7 @@
     "supplier_id": "S3"
  },
  {
-   "item_id": "SKU13",
+   "id": "SKU13",
     "name": "Body Wash (500ML)",
     "category": "Personal & Household Care",
     "stock":5,
@@ -104,7 +104,7 @@
     "supplier_id": "S3"
  },
  {
-    "item_id": "SKU14",
+    "id": "SKU14",
     "name": "Laundry Detergent (2KG)",
     "category": "Personal & Household Care",
     "stock":11,
@@ -112,7 +112,7 @@
     "supplier_id": "S3"
  },
  {
-    "item_id": "SKU15",
+    "id": "SKU15",
     "name": "Dishwashing Liquid (900ML)",
     "category": "Personal & Household Care",
     "stock": 10,
