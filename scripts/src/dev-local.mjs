@@ -70,7 +70,7 @@ try {
   console.log("Building shared libraries and the API...");
   await runPnpm(["run", "typecheck:libs"]);
   await runPnpm(["--filter", "@workspace/api-server", "run", "build"]);
-  start(process.execPath, ["--import", "./development.mjs", "--enable-source-maps", "./dist/index.mjs"], {
+  start(process.execPath, ["--env-file-if-exists=../../.env.local", "--import", "./development.mjs", "--enable-source-maps", "./dist/index.mjs"], {
     cwd: fileURLToPath(new URL("../../artifacts/api-server/", import.meta.url)),
     env: { ...process.env, PORT: String(apiPort), NODE_ENV: "development" }, service: true,
   });

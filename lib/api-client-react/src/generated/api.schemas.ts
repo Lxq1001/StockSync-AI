@@ -5,6 +5,73 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface OrderEmailInput {
+  /**
+     * @minLength 16
+     * @maxLength 150
+     */
+  sendId: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  itemId: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  supplierId: string;
+  /**
+     * @minimum 1
+     * @maximum 1000000
+     */
+  quantity: number;
+  /** @maxLength 254 */
+  to: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  subject: string;
+  /**
+     * @minLength 1
+     * @maxLength 5000
+     */
+  body: string;
+}
+
+export type EmailSettingsTransport = typeof EmailSettingsTransport[keyof typeof EmailSettingsTransport];
+
+
+export const EmailSettingsTransport = {
+  gmail: 'gmail',
+  smtp: 'smtp',
+} as const;
+
+export interface EmailSettings {
+  ready: boolean;
+  sender: string;
+  transport: EmailSettingsTransport;
+  reason: string;
+  approvedSupplierIds: string[];
+}
+
+export type EmailReceiptTransport = typeof EmailReceiptTransport[keyof typeof EmailReceiptTransport];
+
+
+export const EmailReceiptTransport = {
+  gmail: 'gmail',
+  smtp: 'smtp',
+} as const;
+
+export interface EmailReceipt {
+  sendId: string;
+  messageId: string;
+  from: string;
+  acceptedAt: string;
+  transport: EmailReceiptTransport;
+}
+
 export type StockDatasetInventoryItem = {
   id: string;
   name: string;

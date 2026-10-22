@@ -11,6 +11,44 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /email/settings:
+    get:
+      operationId: getEmailSettings
+      responses:
+        "200":
+          description: Shared mailbox configuration (no credentials)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailSettings"
+  /email/send:
+    post:
+      operationId: sendOrderEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderEmailInput"
+      responses:
+        "200":
+          description: Provider accepted the message, or an existing receipt was recovered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailReceipt"
+        "400":
+          description: Invalid email or catalog selection
+        "403":
+          description: Origin or supplier not permitted
+        "409":
+          description: An earlier attempt must be checked before resending
+        "429":
+          description: Sending limit reached
+        "502":
+          description: Provider rejected the message or the outcome is uncertain
+        "503":
+          description: Mailbox or outbox not configured
   /stock-dataset:
     get:
       operationId: getStockDataset
@@ -37,6 +75,38 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 components:
   schemas:
+    OrderEmailInput:
+      type: object
+      additionalProperties: false
+      required: [sendId, itemId, supplierId, quantity, to, subject, body]
+      properties:
+        sendId: {type: string, minLength: 16, maxLength: 150}
+        itemId: {type: string, minLength: 1, maxLength: 80}
+        supplierId: {type: string, minLength: 1, maxLength: 80}
+        quantity: {type: integer, minimum: 1, maximum: 1000000}
+        to: {type: string, format: email, maxLength: 254}
+        subject: {type: string, minLength: 1, maxLength: 200}
+        body: {type: string, minLength: 1, maxLength: 5000}
+    EmailSettings:
+      type: object
+      required: [ready, sender, transport, reason, approvedSupplierIds]
+      properties:
+        ready: {type: boolean}
+        sender: {type: string}
+        transport: {type: string, enum: [gmail, smtp]}
+        reason: {type: string}
+        approvedSupplierIds:
+          type: array
+          items: {type: string}
+    EmailReceipt:
+      type: object
+      required: [sendId, messageId, from, acceptedAt, transport]
+      properties:
+        sendId: {type: string}
+        messageId: {type: string}
+        from: {type: string}
+        acceptedAt: {type: string}
+        transport: {type: string, enum: [gmail, smtp]}
     StockDataset:
       type: object
       required: [inventory, suppliers, salesTransactions, importData]
