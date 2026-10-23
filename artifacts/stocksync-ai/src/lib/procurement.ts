@@ -73,6 +73,15 @@ export function suggestions(data: StoreData): Suggestion[] {
     .sort((a, b) => a.cover - b.cover);
 }
 
+const lowCoverSuggestionQuantity = (sku: SKU) => sku.avgDailyDemand * REORDER_DAYS;
+/** Inventory-card tasks use estimated cover, independently of the overview's on-hand suggestions. */
+export function lowCoverSuggestions(data: StoreData): Suggestion[] {
+  return data.skus
+    .filter(s => isLowCover(s) && s.avgDailyDemand > 0 && !data.rejectedSuggestions.includes(s.id))
+    .map(sku => { const quantity = lowCoverSuggestionQuantity(sku); return { sku, quantity, totalCost: round2(quantity * sku.unitCost), cover: estimatedCover(sku) }; })
+    .sort((a, b) => a.cover - b.cover);
+}
+
 const log = (action: string, details: string, orderId?: string, actor = MANAGER): AuditEntry =>
   ({ id: uid(), timestamp: new Date().toISOString(), actor, action, details, orderId });
 
@@ -80,7 +89,7 @@ export function rejectSuggestion(data: StoreData, skuId: string): StoreData {
   const sku = data.skus.find(s => s.id === skuId);
   if (!sku) throw new Error('This item no longer exists.');
   if (data.rejectedSuggestions.includes(skuId)) return data;
-  return { ...data, rejectedSuggestions: [...data.rejectedSuggestions, skuId], audit: [log('Rejected suggestion', `${sku.name} · suggested ${suggestedQuantity(sku)} ${sku.unit} dismissed`), ...data.audit] };
+  return { ...data, rejectedSuggestions: [...data.rejectedSuggestions, skuId], audit: [log('Rejected suggestion', `${sku.name} · suggested ${lowCoverSuggestionQuantity(sku)} ${sku.unit} dismissed`), ...data.audit] };
 }
 
 export type ItemEdit = { name: string; onHand: string; unitCost: string };

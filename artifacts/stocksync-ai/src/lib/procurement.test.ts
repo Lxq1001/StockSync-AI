@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import {
-  buildDraft, buildMailtoUrl, buildGmailComposeUrl, editItem, initialData as emptyData, RETIRED_STORE_KEYS, loadStore, rejectSuggestion, saveStore, sendDraft,
+  buildDraft, buildMailtoUrl, buildGmailComposeUrl, editItem, initialData as emptyData, RETIRED_STORE_KEYS, loadStore, lowCoverSuggestions, rejectSuggestion, saveStore, sendDraft,
   setDraft, setOrderStatus, STORE_KEY, suggestedQuantity, suggestions, validateItemEdit, type StoreData,
 } from './procurement';
 import { applyImport, averageDailyUse, parseCsv, parseSalesFile, previewImport, sampleCsv } from './sales-import';
@@ -98,6 +98,22 @@ test('suggestions include every eligible item without a five-item limit', () => 
   }));
   assert.equal(suggestions(data).length, 8);
   assert.deepEqual(suggestions(data).map(task => task.quantity), Array(8).fill(30));
+});
+
+test('inventory AI tasks use estimated cover <= 7 days and suggest 30 days of use', () => {
+  const data = emptyData();
+  const base = providedWorkspace(provided).skus[0];
+  data.skus = [
+    { ...base, id: 'cover-five', onHand: 15, avgDailyDemand: 3 },
+    { ...base, id: 'cover-seven', onHand: 28, avgDailyDemand: 4 },
+    { ...base, id: 'cover-over-seven', onHand: 22, avgDailyDemand: 3 },
+    { ...base, id: 'no-demand', onHand: 0, avgDailyDemand: 0 },
+  ];
+
+  const tasks = lowCoverSuggestions(data);
+  assert.deepEqual(tasks.map(task => task.sku.id), ['cover-five', 'cover-seven']);
+  assert.deepEqual(tasks.map(task => task.quantity), [90, 120]);
+  assert.match(rejectSuggestion(data, 'cover-five').audit[0].details, /suggested 90/);
 });
 
 test('workspace starts from the exact static stock values in the supplied inventory', () => {
