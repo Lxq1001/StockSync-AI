@@ -62,7 +62,9 @@ test('average use is latest weekly sales divided by seven, rounded up', () => {
 });
 
 test('suggestions include only on-hand stock <= 7 with demand and use 30 days of average use', () => {
-  const d = initialData();
+  const d = providedWorkspace(provided);
+  const eligible = d.skus.find(s => s.avgDailyDemand > 0)!;
+  d.skus = d.skus.map(s => s.id === eligible.id ? { ...s, onHand: 7 } : s);
   const ids = suggestions(d).map(s => s.sku.id);
   for (const sku of d.skus) {
     assert.equal(ids.includes(sku.id), sku.onHand <= 7 && sku.avgDailyDemand > 0, sku.name);
@@ -70,6 +72,38 @@ test('suggestions include only on-hand stock <= 7 with demand and use 30 days of
   const t = suggestions(d)[0];
   assert.equal(t.totalCost, Math.round(t.quantity * t.sku.unitCost * 100) / 100);
   assert.equal(t.quantity, t.sku.avgDailyDemand * 30);
+});
+
+test('suggestions include every eligible item without a five-item limit', () => {
+  const data = initialData();
+  data.skus = Array.from({ length: 8 }, (_, index) => ({
+    ...data.skus[0], id: `eligible-${index}`, onHand: index, avgDailyDemand: 1,
+  }));
+  assert.equal(suggestions(data).length, 8);
+  assert.deepEqual(suggestions(data).map(task => task.quantity), Array(8).fill(30));
+});
+
+test('provided starting stock is randomized within 15 to 30 units', () => {
+  const data = providedWorkspace(provided);
+  assert.equal(data.skus.length, provided.inventory.length);
+  for (const sku of data.skus) {
+    assert.ok(Number.isInteger(sku.onHand) && sku.onHand >= 15 && sku.onHand <= 30, sku.name);
+  }
+});
+
+test('existing workspaces randomize untouched starting stock once and preserve edited quantities', () => {
+  const oldWorkspace = providedWorkspace(provided);
+  oldWorkspace.startingStockRandomized = undefined;
+  oldWorkspace.skus = oldWorkspace.skus.map(sku => ({
+    ...sku, onHand: provided.inventory.find(item => item.id === sku.id)!.stock,
+  }));
+  const migrated = loadProvidedWorkspace(oldWorkspace, provided);
+  assert.equal(migrated.startingStockRandomized, true);
+  for (const sku of migrated.skus) {
+    assert.ok(Number.isInteger(sku.onHand) && sku.onHand >= 15 && sku.onHand <= 30, sku.name);
+  }
+  const edited = { ...oldWorkspace, skus: oldWorkspace.skus.map(sku => sku.id === 'SKU1' ? { ...sku, onHand: 42 } : sku) };
+  assert.equal(loadProvidedWorkspace(edited, provided).skus.find(sku => sku.id === 'SKU1')!.onHand, 42);
 });
 
 test('the seven-unit threshold is inclusive, not seven days of cover or batch rounding', () => {
@@ -88,10 +122,13 @@ test('the seven-unit threshold is inclusive, not seven days of cover or batch ro
 
 test('rejecting a suggestion persists across reload', () => {
   const s = new MemStore();
-  const id = suggestions(initialData())[0].sku.id;
-  const loaded = roundTrip(s, rejectSuggestion(initialData(), id));
+  const data = providedWorkspace(provided);
+  const eligible = data.skus.find(sku => sku.avgDailyDemand > 0)!;
+  data.skus = data.skus.map(sku => sku.id === eligible.id ? { ...sku, onHand: 1 } : sku);
+  const id = suggestions(data)[0].sku.id;
+  const loaded = roundTrip(s, rejectSuggestion(data, id));
   assert.ok(!suggestions(loaded).some(x => x.sku.id === id));
-  assert.throws(() => rejectSuggestion(initialData(), 'nope'));
+  assert.throws(() => rejectSuggestion(data, 'nope'));
 });
 
 test('item edit validates blank, negative and non-finite and persists', () => {
@@ -181,7 +218,7 @@ test('contact refresh fills missing saved recipients but retains manually edited
   assert.equal(mergeSupplierContacts(custom, provided).draft?.to, 'custom@example.test');
 });
 
-test('provided import accepts receipt objects and arrays, preserving stock and duplicate safety', () => {
+test('provided import accepts receipt objects and arrays, subtracting stock and retaining duplicate-safe history', () => {
   const data = providedWorkspace(provided);
   const parsed = parseSalesFile('import_data.json', JSON.stringify(provided.importData), data.skus);
   assert.ok(parsed.ok);
@@ -190,7 +227,10 @@ test('provided import accepts receipt objects and arrays, preserving stock and d
   const preview = previewImport(data, parsed.rows);
   const next = applyImport(data, preview, 'Tester');
   assert.equal(next.skus.find(s => s.id === 'SKU1')?.avgDailyDemand, 2);
-  assert.deepEqual(next.skus.map(s => s.onHand), data.skus.map(s => s.onHand));
+  for (const sku of data.skus) {
+    const importedQuantity = parsed.rows.filter(row => row.itemId === sku.id).reduce((sum, row) => sum + row.quantity, 0);
+    assert.equal(next.skus.find(item => item.id === sku.id)?.onHand, Math.max(0, sku.onHand - importedQuantity));
+  }
   assert.equal(next.salesTransactions?.length, 97);
   assert.equal(applyImport(next, preview, 'Tester').salesTransactions?.length, 97);
 });
@@ -248,7 +288,8 @@ test('cleanup preserves valid new-dataset orders, edits, drafts, imported sales,
   assert.deepEqual(cleaned.orders, imported.orders);
   assert.deepEqual(cleaned.draft, imported.draft);
   assert.deepEqual(cleaned.audit, imported.audit);
-  assert.equal(cleaned.skus[0].onHand, 77);
+  const importedSku1Quantity = parsed.rows.filter(row => row.itemId === 'SKU1').reduce((sum, row) => sum + row.quantity, 0);
+  assert.equal(cleaned.skus[0].onHand, Math.max(0, 77 - importedSku1Quantity));
   assert.equal(cleaned.skus[0].avgDailyDemand, 2);
   assert.equal(cleaned.salesTransactions?.length, 97);
   assert.deepEqual(roundTrip(new MemStore(), cleaned), JSON.parse(JSON.stringify(cleaned)));
@@ -291,7 +332,7 @@ test('CSV parser handles quotes, escaped quotes and CRLF', () => {
   assert.throws(() => parseCsv('"open'));
 });
 
-test('import validates atomically and recomputes a 7-day window without touching stock', () => {
+test('import validates atomically, recomputes demand, and deducts imported sales from stock', () => {
   const d = initialData();
   const bad = parseSalesFile('s.csv', 'itemId,date,quantity\nSKU6,2025-04-18,3\nSKU999,2025-04-18,1\nSKU6,2025-02-30,1\nSKU6,2025-04-18,-2\n', d.skus);
   assert.equal(bad.ok, false);
@@ -306,10 +347,15 @@ test('import validates atomically and recomputes a 7-day window without touching
   assert.equal(p.windowStart, '2025-04-12');
   assert.equal(p.outside, 1);
   assert.equal(p.items[0].after, 3);
+  assert.equal(p.items[0].importedQuantity, 120);
+  assert.equal(p.items[0].stockAfter, 0);
+  d.rejectedSuggestions = ['SKU1'];
   const next = applyImport(d, p, 'Aina Rahman');
   const milk = next.skus.find(s => s.id === 'SKU1')!;
   assert.equal(milk.avgDailyDemand, 3);
-  assert.equal(milk.onHand, 10);
+  assert.equal(milk.onHand, 0);
+  assert.deepEqual(next.rejectedSuggestions, []);
+  assert.ok(suggestions(next).some(task => task.sku.id === 'SKU1'));
   assert.equal(next.skus.find(s => s.id === 'SKU6')!.avgDailyDemand, 1);
   const json = parseSalesFile('s.json', JSON.stringify([{ itemId: 'SKU6', date: '2025-04-18', quantity: 'x' }]), d.skus);
   assert.equal(json.ok, false);

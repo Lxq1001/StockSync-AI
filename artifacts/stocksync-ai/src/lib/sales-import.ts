@@ -97,11 +97,12 @@ function normalizeReceiptDate(value: unknown): unknown {
   const month = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(match[1]) + 1;
   return `${match[3]}-${String(month).padStart(2, '0')}-${match[2].padStart(2, '0')}`;
 }
-export type ImportPreview = { windowStart: string; windowEnd: string; items: { id: string; name: string; before: number; after: number; recentSales: number[] }[]; rows: number; outside: number; salesRows: SalesRow[] };
+export type ImportPreview = { windowStart: string; windowEnd: string; items: { id: string; name: string; before: number; after: number; recentSales: number[]; stockBefore: number; stockAfter: number; importedQuantity: number }[]; rows: number; outside: number; salesRows: SalesRow[] };
 /**
  * The 7-day window ends on the latest date in the file. Each item that appears in the file gets
  * recentSales = daily totals over those 7 days (missing days = 0) and avgDailyDemand = ceil(total / 7).
- * Items absent from the file are unchanged. Stock on hand is never decremented.
+ * All imported quantities reduce on-hand stock, including rows outside the demand window.
+ * Items absent from the file are unchanged.
  */
 export function previewImport(data: StoreData, rows: SalesRow[]): ImportPreview {
   const windowEnd = rows.reduce((m, r) => r.date > m ? r.date : m, rows[0].date);
@@ -113,7 +114,11 @@ export function previewImport(data: StoreData, rows: SalesRow[]): ImportPreview 
   for (const r of rows) { const i = days.indexOf(r.date); if (i < 0) { outside++; continue; } totals.get(r.itemId)![i] += r.quantity; }
   const items = ids.map(id => {
     const sku = data.skus.find(s => s.id === id)!; const recentSales = totals.get(id)!.map(n => Math.round(n * 100) / 100);
-    return { id, name: sku.name, before: sku.avgDailyDemand, after: averageDailyUse(recentSales), recentSales };
+    const importedQuantity = rows.filter(row => row.itemId === id).reduce((sum, row) => sum + row.quantity, 0);
+    return {
+      id, name: sku.name, before: sku.avgDailyDemand, after: averageDailyUse(recentSales), recentSales,
+      stockBefore: sku.onHand, stockAfter: Math.max(0, sku.onHand - importedQuantity), importedQuantity,
+    };
   });
   return { windowStart, windowEnd, items, rows: rows.length, outside, salesRows: rows };
 }
@@ -122,10 +127,11 @@ export function applyImport(data: StoreData, preview: ImportPreview, actor: stri
   const incomingDays = new Set(preview.salesRows.map(r => `${r.itemId}:${r.date}`));
   return {
     ...data,
-    skus: data.skus.map(s => { const p = byId.get(s.id); return p ? { ...s, avgDailyDemand: p.after, recentSales: p.recentSales } : s; }),
+    skus: data.skus.map(s => { const p = byId.get(s.id); return p ? { ...s, onHand: p.stockAfter, avgDailyDemand: p.after, recentSales: p.recentSales } : s; }),
+    rejectedSuggestions: data.rejectedSuggestions.filter(id => !byId.has(id)),
     salesTransactions: [...(data.salesTransactions ?? []).filter(r => typeof r.itemId === 'string' && !incomingDays.has(`${r.itemId}:${r.date}`)), ...preview.salesRows],
     lastImport: { importedAt: new Date().toISOString(), rows: preview.rows, windowStart: preview.windowStart, windowEnd: preview.windowEnd },
-    audit: [{ id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()), timestamp: new Date().toISOString(), actor, action: 'Imported sales', details: `${preview.rows} rows · ${preview.items.length} items · demand window ${preview.windowStart} to ${preview.windowEnd} · stock on hand unchanged` }, ...data.audit],
+    audit: [{ id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()), timestamp: new Date().toISOString(), actor, action: 'Imported sales', details: `${preview.rows} rows · ${preview.items.length} items · demand window ${preview.windowStart} to ${preview.windowEnd} · on-hand stock reduced by imported quantities` }, ...data.audit],
   };
 }
 export function sampleCsv(skus: SKU[], end = new Date().toISOString().slice(0, 10)): string {

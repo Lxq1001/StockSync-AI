@@ -25,6 +25,7 @@ export type TemplateDraft = {
 };
 export type StoreData = {
   version: 2;
+  startingStockRandomized?: boolean;
   skus: SKU[]; suppliers: Supplier[]; orders: PurchaseOrder[]; audit: AuditEntry[];
   budgetCap: number; rejectedSuggestions: string[]; legacyOrders: LegacyOrder[];
   salesTransactions?: import('./sales-import').SalesRow[];
@@ -197,7 +198,8 @@ const validAudit = (a: unknown): a is AuditEntry => isObj(a) && str(a.id) && str
 export function validV2(raw: unknown): raw is StoreData {
   if (!isObj(raw) || raw.version !== 2) return false;
   const r = raw as Record<string, unknown>;
-  return Array.isArray(r.skus) && r.skus.every(validSku) && Array.isArray(r.suppliers) && r.suppliers.every(validSupplier)
+  return (r.startingStockRandomized === undefined || typeof r.startingStockRandomized === 'boolean')
+    && Array.isArray(r.skus) && r.skus.every(validSku) && Array.isArray(r.suppliers) && r.suppliers.every(validSupplier)
     && Array.isArray(r.orders) && r.orders.every(o => validOrderBase(o) && (ORDER_STATUSES as readonly string[]).includes(o.status))
     && Array.isArray(r.audit) && r.audit.every(validAudit) && Array.isArray(r.rejectedSuggestions) && Array.isArray(r.legacyOrders);
 }
