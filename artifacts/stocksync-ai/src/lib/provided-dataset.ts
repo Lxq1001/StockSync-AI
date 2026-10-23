@@ -4,12 +4,14 @@ import { averageDailyUse, parseSalesFile, previewImport } from './sales-import';
 
 export type ProvidedDataset = StockDataset;
 
-function cleanStatusAuditDetails(data: StoreData): StoreData {
+function cleanAuditDetails(data: StoreData): StoreData {
   return {
     ...data,
     audit: data.audit.map(entry => entry.action === 'Changed order status'
       ? { ...entry, details: entry.details.replace(/\s*·\s*tracking only,\s*stock not changed\s*$/, '') }
-      : entry),
+      : entry.action === 'Imported sales'
+        ? { ...entry, details: entry.details.replace(/\s*·\s*[\d.eE+-]+\s+units?\s+exceeded available stock\s*$/, '') }
+        : entry),
   };
 }
 
@@ -86,7 +88,7 @@ export function loadProvidedWorkspace(current: StoreData, bundle: ProvidedDatase
     lastImport: hasHistory ? current.lastImport ?? next.lastImport : next.lastImport,
     salesTransactions: hasHistory ? history : next.salesTransactions,
   }, bundle);
-  return cleanStatusAuditDetails(merged);
+  return cleanAuditDetails(merged);
 }
 
 type DatasetStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;

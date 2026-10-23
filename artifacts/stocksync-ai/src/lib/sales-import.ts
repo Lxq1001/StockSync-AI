@@ -128,15 +128,13 @@ export function previewImport(data: StoreData, rows: SalesRow[]): ImportPreview 
 export function applyImport(data: StoreData, preview: ImportPreview, actor: string): StoreData {
   const byId = new Map(preview.items.map(i => [i.id, i]));
   const incomingDays = new Set(preview.salesRows.map(r => `${r.itemId}:${r.date}`));
-  const stockShortfall = preview.items.reduce((total, item) => total + item.stockShortfall, 0);
-  const shortfallNote = stockShortfall > 0 ? ` · ${stockShortfall} units exceeded available stock` : '';
   return {
     ...data,
     skus: data.skus.map(s => { const p = byId.get(s.id); return p ? { ...s, onHand: p.stockAfter, avgDailyDemand: p.after, recentSales: p.recentSales } : s; }),
     rejectedSuggestions: data.rejectedSuggestions.filter(id => !byId.has(id)),
     salesTransactions: [...(data.salesTransactions ?? []).filter(r => typeof r.itemId === 'string' && !incomingDays.has(`${r.itemId}:${r.date}`)), ...preview.salesRows],
     lastImport: { importedAt: new Date().toISOString(), rows: preview.rows, windowStart: preview.windowStart, windowEnd: preview.windowEnd },
-    audit: [{ id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()), timestamp: new Date().toISOString(), actor, action: 'Imported sales', details: `${preview.rows} rows · ${preview.items.length} items · demand window ${preview.windowStart} to ${preview.windowEnd} · stock deducted up to available quantity${shortfallNote}` }, ...data.audit],
+    audit: [{ id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()), timestamp: new Date().toISOString(), actor, action: 'Imported sales', details: `${preview.rows} rows · ${preview.items.length} items · demand window ${preview.windowStart} to ${preview.windowEnd} · stock deducted up to available quantity` }, ...data.audit],
   };
 }
 export function sampleCsv(skus: SKU[], end = new Date().toISOString().slice(0, 10)): string {

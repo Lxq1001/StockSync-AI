@@ -278,10 +278,13 @@ test('workspace migration removes the obsolete stock note from saved status acti
   data.audit = [
     { id: 'status-change', timestamp: '2026-10-23T00:00:00Z', actor: 'Aina Rahman', action: 'Changed order status', details: 'PO-123 · Sent to Pending Delivery · tracking only, stock not changed' },
     { id: 'other-event', timestamp: '2026-10-23T00:00:00Z', actor: 'Aina Rahman', action: 'Imported sales', details: 'Sales imported · stock not changed' },
+    { id: 'import-shortfall', timestamp: '2026-10-23T00:00:00Z', actor: 'Aina Rahman', action: 'Imported sales', details: '55 rows · stock deducted up to available quantity · 3 units exceeded available stock' },
   ];
   const migrated = loadProvidedWorkspace(data, provided);
   assert.equal(migrated.audit[0].details, 'PO-123 · Sent to Pending Delivery');
   assert.equal(migrated.audit[1].details, 'Sales imported · stock not changed');
+  assert.equal(migrated.audit[2].details, '55 rows · stock deducted up to available quantity');
+  assert.deepEqual(migrated.skus, data.skus);
 });
 
 test('retired browser stores are deleted and no old products, orders, or activity return', () => {
@@ -391,7 +394,7 @@ test('import validates atomically, recomputes demand, and deducts imported sales
   assert.equal(milk.avgDailyDemand, 3);
   assert.equal(milk.onHand, 0);
   assert.ok(milk.onHand >= 0);
-  assert.match(next.audit[0].details, /exceeded available stock/);
+  assert.doesNotMatch(next.audit[0].details, /exceeded available stock/);
   assert.deepEqual(next.rejectedSuggestions, []);
   assert.ok(suggestions(next).some(task => task.sku.id === 'SKU1'));
   assert.equal(next.skus.find(s => s.id === 'SKU6')!.avgDailyDemand, 1);
@@ -416,7 +419,7 @@ test('import preview deducts no more than available stock and flags overstocked 
   const applied = applyImport(data, preview, 'Tester');
   assert.equal(applied.skus.find(sku => sku.id === 'SKU1')!.onHand, 0);
   assert.equal(applied.salesTransactions?.filter(row => row.itemId === 'SKU1' && row.date === '2026-10-20').reduce((sum, row) => sum + row.quantity, 0), 14);
-  assert.match(applied.audit[0].details, /12 units exceeded available stock/);
+  assert.doesNotMatch(applied.audit[0].details, /exceeded available stock/);
 });
 
 test('downloadable demo sales stay simple and leave at least one unit on hand', () => {
