@@ -74,8 +74,7 @@ export function TemplatePage({ data, update, toast }: PageProps) {
     {handoff && <Modal title="Finish sending in Gmail" testId="modal-gmail-confirmation" onClose={() => { if (!sending) setHandoff(null); }}
       footer={<><button className="button" disabled={sending} onClick={() => setHandoff(null)}>Not sent yet</button>
         <button className="button primary" disabled={sending} onClick={recordSent} data-testid="button-confirm-gmail-sent">{sending ? 'Recording...' : 'I sent it — record order'}</button></>}>
-      <p>In the Gmail tab, choose the correct sending account, review the recipient and template, then click Gmail’s Send button.</p>
-      <p>Return here only after sending. StockSync cannot detect the Gmail send or verify delivery. Confirming below creates a Sent purchase order in this browser based on your confirmation.</p>
+      <p>Confirming below creates a Sent purchase order in this browser based on your confirmation.</p>
       <FormError message={error} />
     </Modal>}
   </main>;

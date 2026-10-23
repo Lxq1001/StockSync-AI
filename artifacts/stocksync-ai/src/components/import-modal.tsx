@@ -34,7 +34,7 @@ export function ImportModal({ data, update, toast, onClose, providedImportData }
     if (update(d => applyImport(d, preview, MANAGER))) { toast(`Imported ${preview.rows} sales rows. On-hand stock, demand, and suggestions updated.`); onClose(); }
   };
 
-  return <Modal title="Import sales transactions" copy="Deducts sales from available stock without allowing on-hand quantity below zero, then recalculates recent daily demand." onClose={onClose} testId="modal-import" wide
+  return <Modal title="Import sales transactions" onClose={onClose} testId="modal-import" wide
     footer={<><button className="button" onClick={onClose} data-testid="button-cancel-import">Cancel</button><button className="button primary" disabled={!preview || busy} onClick={apply} data-testid="button-apply-import">Apply import</button></>}>
     <div className="format-box" data-testid="text-import-formats">
       <b>Accepted formats only</b>
@@ -43,7 +43,6 @@ export function ImportModal({ data, update, toast, onClose, providedImportData }
       <div className="item-detail">Dates as YYYY-MM-DD, quantity 0 or more, itemId must match an inventory item. Max {IMPORT_MAX_BYTES / 1024} KB. This is not a database connection; SQL dumps and other formats are not supported. If any row is invalid, nothing is imported.</div>
       <div className="item-detail">Known item IDs: {data.skus.map(s => s.id).join(', ')}</div>
       <button type="button" className="inline-link link-button" onClick={download} data-testid="button-download-sample"><Download size={13} /> Download sample CSV</button>
-      <div className="item-detail">The sample uses small one-unit sales and adjusts to current stock, leaving at least one unit on hand.</div>
     </div>
     <label className="file-drop" data-testid="label-import-file">
       <FileUp size={18} /><span>{fileName || 'Choose a .csv or .json file'}</span>
