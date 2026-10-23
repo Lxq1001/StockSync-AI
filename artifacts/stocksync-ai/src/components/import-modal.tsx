@@ -34,7 +34,7 @@ export function ImportModal({ data, update, toast, onClose, providedImportData }
     if (update(d => applyImport(d, preview, MANAGER))) { toast(`Imported ${preview.rows} sales rows. On-hand stock, demand, and suggestions updated.`); onClose(); }
   };
 
-  return <Modal title="Import sales transactions" copy="Subtracts imported quantities from stock and recalculates recent daily demand. " onClose={onClose} testId="modal-import" wide
+  return <Modal title="Import sales transactions" copy="Deducts sales from available stock without allowing on-hand quantity below zero, then recalculates recent daily demand." onClose={onClose} testId="modal-import" wide
     footer={<><button className="button" onClick={onClose} data-testid="button-cancel-import">Cancel</button><button className="button primary" disabled={!preview || busy} onClick={apply} data-testid="button-apply-import">Apply import</button></>}>
     <div className="format-box" data-testid="text-import-formats">
       <b>Accepted formats only</b>
@@ -53,8 +53,13 @@ export function ImportModal({ data, update, toast, onClose, providedImportData }
     {preview && <div className="import-preview" data-testid="panel-import-preview">
       <div className="item-name">{preview.rows} valid rows · {preview.items.length} item{preview.items.length === 1 ? '' : 's'} · window {preview.windowStart} to {preview.windowEnd}</div>
       {preview.outside > 0 && <div className="item-detail">{preview.outside} row{preview.outside === 1 ? '' : 's'} fall outside the 7-day window and are ignored for demand.</div>}
+      {preview.items.some(i => i.stockShortfall > 0) && <div className="item-detail" role="status" data-testid="text-import-stock-shortfall">
+        Some imported historical sales exceed current on-hand stock. Stock is reduced only by what is available and never below zero; the full sales quantities still count toward demand.
+      </div>}
       <table className="data-table compact"><thead><tr><th>Item</th><th>On hand after</th><th>Avg/day after</th></tr></thead>
-        <tbody>{preview.items.map(i => <tr key={i.id}><td>{i.name}</td><td className="mono">{i.stockBefore} − {i.importedQuantity} = <b>{i.stockAfter}</b></td><td className="mono">{i.after}</td></tr>)}</tbody></table>
+        <tbody>{preview.items.map(i => <tr key={i.id}><td>{i.name}</td><td><div className="mono">{i.stockBefore} − {i.stockDeducted} = <b>{i.stockAfter}</b></div>
+          {i.stockShortfall > 0 && <div className="item-detail" data-testid={`text-stock-shortfall-${i.id}`}>{i.importedQuantity} imported · {i.stockShortfall} beyond available stock</div>}
+        </td><td className="mono">{i.after}</td></tr>)}</tbody></table>
     </div>}
   </Modal>;
 }

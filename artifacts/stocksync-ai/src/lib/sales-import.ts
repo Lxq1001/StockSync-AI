@@ -97,11 +97,12 @@ function normalizeReceiptDate(value: unknown): unknown {
   const month = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(match[1]) + 1;
   return `${match[3]}-${String(month).padStart(2, '0')}-${match[2].padStart(2, '0')}`;
 }
-export type ImportPreview = { windowStart: string; windowEnd: string; items: { id: string; name: string; before: number; after: number; recentSales: number[]; stockBefore: number; stockAfter: number; importedQuantity: number }[]; rows: number; outside: number; salesRows: SalesRow[] };
+export type ImportPreview = { windowStart: string; windowEnd: string; items: { id: string; name: string; before: number; after: number; recentSales: number[]; stockBefore: number; stockAfter: number; importedQuantity: number; stockDeducted: number; stockShortfall: number }[]; rows: number; outside: number; salesRows: SalesRow[] };
 /**
  * The 7-day window ends on the latest date in the file. Each item that appears in the file gets
  * recentSales = daily totals over those 7 days (missing days = 0) and avgDailyDemand = ceil(total / 7).
- * All imported quantities reduce on-hand stock, including rows outside the demand window.
+ * Imported quantities reduce on-hand stock only up to the available amount, including rows outside
+ * the demand window. Full historical quantities remain in demand history; any excess is reported.
  * Items absent from the file are unchanged.
  */
 export function previewImport(data: StoreData, rows: SalesRow[]): ImportPreview {
@@ -115,9 +116,11 @@ export function previewImport(data: StoreData, rows: SalesRow[]): ImportPreview 
   const items = ids.map(id => {
     const sku = data.skus.find(s => s.id === id)!; const recentSales = totals.get(id)!.map(n => Math.round(n * 100) / 100);
     const importedQuantity = rows.filter(row => row.itemId === id).reduce((sum, row) => sum + row.quantity, 0);
+    const stockDeducted = Math.min(sku.onHand, importedQuantity);
+    const stockShortfall = Math.max(0, importedQuantity - stockDeducted);
     return {
       id, name: sku.name, before: sku.avgDailyDemand, after: averageDailyUse(recentSales), recentSales,
-      stockBefore: sku.onHand, stockAfter: Math.max(0, sku.onHand - importedQuantity), importedQuantity,
+      stockBefore: sku.onHand, stockAfter: Math.max(0, sku.onHand - stockDeducted), importedQuantity, stockDeducted, stockShortfall,
     };
   });
   return { windowStart, windowEnd, items, rows: rows.length, outside, salesRows: rows };
@@ -125,13 +128,15 @@ export function previewImport(data: StoreData, rows: SalesRow[]): ImportPreview 
 export function applyImport(data: StoreData, preview: ImportPreview, actor: string): StoreData {
   const byId = new Map(preview.items.map(i => [i.id, i]));
   const incomingDays = new Set(preview.salesRows.map(r => `${r.itemId}:${r.date}`));
+  const stockShortfall = preview.items.reduce((total, item) => total + item.stockShortfall, 0);
+  const shortfallNote = stockShortfall > 0 ? ` · ${stockShortfall} units exceeded available stock` : '';
   return {
     ...data,
     skus: data.skus.map(s => { const p = byId.get(s.id); return p ? { ...s, onHand: p.stockAfter, avgDailyDemand: p.after, recentSales: p.recentSales } : s; }),
     rejectedSuggestions: data.rejectedSuggestions.filter(id => !byId.has(id)),
     salesTransactions: [...(data.salesTransactions ?? []).filter(r => typeof r.itemId === 'string' && !incomingDays.has(`${r.itemId}:${r.date}`)), ...preview.salesRows],
     lastImport: { importedAt: new Date().toISOString(), rows: preview.rows, windowStart: preview.windowStart, windowEnd: preview.windowEnd },
-    audit: [{ id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()), timestamp: new Date().toISOString(), actor, action: 'Imported sales', details: `${preview.rows} rows · ${preview.items.length} items · demand window ${preview.windowStart} to ${preview.windowEnd} · on-hand stock reduced by imported quantities` }, ...data.audit],
+    audit: [{ id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()), timestamp: new Date().toISOString(), actor, action: 'Imported sales', details: `${preview.rows} rows · ${preview.items.length} items · demand window ${preview.windowStart} to ${preview.windowEnd} · stock deducted up to available quantity${shortfallNote}` }, ...data.audit],
   };
 }
 export function sampleCsv(skus: SKU[], end = new Date().toISOString().slice(0, 10)): string {
