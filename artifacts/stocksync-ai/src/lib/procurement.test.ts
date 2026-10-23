@@ -83,27 +83,33 @@ test('suggestions include every eligible item without a five-item limit', () => 
   assert.deepEqual(suggestions(data).map(task => task.quantity), Array(8).fill(30));
 });
 
-test('provided starting stock is randomized within 15 to 30 units', () => {
+test('demo workspace keeps ordinary starting stock at 15 to 30 and seeds three low-stock suggestions', () => {
   const data = providedWorkspace(provided);
   assert.equal(data.skus.length, provided.inventory.length);
-  for (const sku of data.skus) {
-    assert.ok(Number.isInteger(sku.onHand) && sku.onHand >= 15 && sku.onHand <= 30, sku.name);
-  }
+  const demoIds = new Set(suggestions(data).map(task => task.sku.id));
+  assert.equal(demoIds.size, 3);
+  for (const sku of data.skus)
+    assert.ok(Number.isInteger(sku.onHand) && (demoIds.has(sku.id) ? sku.onHand >= 5 && sku.onHand <= 7 : sku.onHand >= 15 && sku.onHand <= 30), sku.name);
+  assert.equal(data.demoSuggestionsSeeded, true);
 });
 
-test('existing workspaces randomize untouched starting stock once and preserve edited quantities', () => {
+test('existing workspaces seed demo suggestions once and preserve other edited quantities', () => {
   const oldWorkspace = providedWorkspace(provided);
   oldWorkspace.startingStockRandomized = undefined;
+  oldWorkspace.demoSuggestionsSeeded = undefined;
   oldWorkspace.skus = oldWorkspace.skus.map(sku => ({
     ...sku, onHand: provided.inventory.find(item => item.id === sku.id)!.stock,
   }));
   const migrated = loadProvidedWorkspace(oldWorkspace, provided);
   assert.equal(migrated.startingStockRandomized, true);
-  for (const sku of migrated.skus) {
-    assert.ok(Number.isInteger(sku.onHand) && sku.onHand >= 15 && sku.onHand <= 30, sku.name);
-  }
-  const edited = { ...oldWorkspace, skus: oldWorkspace.skus.map(sku => sku.id === 'SKU1' ? { ...sku, onHand: 42 } : sku) };
-  assert.equal(loadProvidedWorkspace(edited, provided).skus.find(sku => sku.id === 'SKU1')!.onHand, 42);
+  assert.equal(migrated.demoSuggestionsSeeded, true);
+  assert.equal(suggestions(migrated).length, 3);
+  const demoIds = new Set(suggestions(migrated).map(task => task.sku.id));
+  const editedSkuId = oldWorkspace.skus.find(sku => !demoIds.has(sku.id))!.id;
+  const edited = { ...oldWorkspace, skus: oldWorkspace.skus.map(sku => sku.id === editedSkuId ? { ...sku, onHand: 42 } : sku) };
+  const migratedEdit = loadProvidedWorkspace(edited, provided);
+  assert.equal(migratedEdit.skus.find(sku => sku.id === editedSkuId)!.onHand, 42);
+  assert.equal(suggestions(migratedEdit).length, 3);
 });
 
 test('the seven-unit threshold is inclusive, not seven days of cover or batch rounding', () => {
@@ -250,6 +256,17 @@ test('status change is tracking only, persists, and never changes stock', () => 
   assert.match(loaded.audit[0].details, new RegExp(`${id} · Pending Delivery to Received`));
   assert.doesNotMatch(loaded.audit[0].details, /tracking only, stock not changed/);
   assert.throws(() => setOrderStatus(d, id, 'Awaiting approval' as never));
+});
+
+test('workspace migration removes the obsolete stock note from saved status activity', () => {
+  const data = providedWorkspace(provided);
+  data.audit = [
+    { id: 'status-change', timestamp: '2026-10-23T00:00:00Z', actor: 'Aina Rahman', action: 'Changed order status', details: 'PO-123 · Sent to Pending Delivery · tracking only, stock not changed' },
+    { id: 'other-event', timestamp: '2026-10-23T00:00:00Z', actor: 'Aina Rahman', action: 'Imported sales', details: 'Sales imported · stock not changed' },
+  ];
+  const migrated = loadProvidedWorkspace(data, provided);
+  assert.equal(migrated.audit[0].details, 'PO-123 · Sent to Pending Delivery');
+  assert.equal(migrated.audit[1].details, 'Sales imported · stock not changed');
 });
 
 test('retired browser stores are deleted and no old products, orders, or activity return', () => {

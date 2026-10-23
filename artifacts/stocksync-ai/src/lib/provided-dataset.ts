@@ -5,6 +5,33 @@ import { averageDailyUse, parseSalesFile, previewImport } from './sales-import';
 export type ProvidedDataset = StockDataset;
 
 const randomStartingStock = () => Math.floor(Math.random() * 16) + 15;
+const randomDemoStock = () => Math.floor(Math.random() * 3) + 5;
+
+function seedDemoSuggestions(data: StoreData): StoreData {
+  if (data.demoSuggestionsSeeded) return data;
+  const demoIds = new Set(
+    [...data.skus]
+      .filter(sku => sku.avgDailyDemand > 0)
+      .sort((a, b) => b.avgDailyDemand - a.avgDailyDemand || a.id.localeCompare(b.id))
+      .slice(0, 3)
+      .map(sku => sku.id),
+  );
+  return {
+    ...data,
+    demoSuggestionsSeeded: true,
+    skus: data.skus.map(sku => demoIds.has(sku.id) ? { ...sku, onHand: randomDemoStock() } : sku),
+    rejectedSuggestions: data.rejectedSuggestions.filter(id => !demoIds.has(id)),
+  };
+}
+
+function cleanStatusAuditDetails(data: StoreData): StoreData {
+  return {
+    ...data,
+    audit: data.audit.map(entry => entry.action === 'Changed order status'
+      ? { ...entry, details: entry.details.replace(/\s*·\s*tracking only,\s*stock not changed\s*$/, '') }
+      : entry),
+  };
+}
 
 export function mergeSupplierContacts(data: StoreData, bundle: ProvidedDataset): StoreData {
   const contacts = new Map(bundle.suppliers.map(s => [s.supplier_id, s.email.trim()]));
@@ -42,7 +69,7 @@ export function providedWorkspace(bundle: ProvidedDataset): StoreData {
   });
   data.lastImport = { importedAt: new Date().toISOString(), rows: preview.rows, windowStart: preview.windowStart, windowEnd: preview.windowEnd };
   data.salesTransactions = parsed.rows;
-  return data;
+  return seedDemoSuggestions(data);
 }
 
 /** Only supplied product and supplier IDs may survive from a saved workspace. */
@@ -60,7 +87,7 @@ export function loadProvidedWorkspace(current: StoreData, bundle: ProvidedDatase
   const history = Array.isArray(current.salesTransactions)
     ? current.salesTransactions.filter(r => itemIds.has(r.itemId) && typeof r.date === 'string' && typeof r.quantity === 'number' && Number.isFinite(r.quantity) && r.quantity >= 0) : [];
   const hasHistory = history.length > 0;
-  return mergeSupplierContacts({
+  const merged = mergeSupplierContacts({
     ...current,
     startingStockRandomized: true,
     skus: next.skus.map(s => {
@@ -79,6 +106,7 @@ export function loadProvidedWorkspace(current: StoreData, bundle: ProvidedDatase
     lastImport: hasHistory ? current.lastImport ?? next.lastImport : next.lastImport,
     salesTransactions: hasHistory ? history : next.salesTransactions,
   }, bundle);
+  return seedDemoSuggestions(cleanStatusAuditDetails(merged));
 }
 
 type DatasetStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
