@@ -247,6 +247,8 @@ test('status change is tracking only, persists, and never changes stock', () => 
   const loaded = roundTrip(s, n);
   assert.equal(loaded.orders.find(o => o.id === id)!.status, 'Received');
   assert.deepEqual(loaded.skus.map(x => x.onHand), stock);
+  assert.match(loaded.audit[0].details, new RegExp(`${id} · Pending Delivery to Received`));
+  assert.doesNotMatch(loaded.audit[0].details, /tracking only, stock not changed/);
   assert.throws(() => setOrderStatus(d, id, 'Awaiting approval' as never));
 });
 

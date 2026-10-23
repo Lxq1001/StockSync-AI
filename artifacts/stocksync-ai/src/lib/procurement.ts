@@ -182,7 +182,7 @@ export function setOrderStatus(data: StoreData, orderId: string, status: OrderSt
   const order = data.orders.find(o => o.id === orderId);
   if (!order) throw new Error('This purchase order no longer exists.');
   if (order.status === status) return data;
-  return { ...data, orders: data.orders.map(o => o.id === orderId ? { ...o, status } : o), audit: [log('Changed order status', `${orderId} · ${order.status} to ${status} · tracking only, stock not changed`, orderId), ...data.audit] };
+  return { ...data, orders: data.orders.map(o => o.id === orderId ? { ...o, status } : o), audit: [log('Changed order status', `${orderId} · ${order.status} to ${status}`, orderId), ...data.audit] };
 }
 
 // ---------- persistence ----------
