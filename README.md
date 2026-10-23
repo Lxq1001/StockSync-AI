@@ -1,6 +1,42 @@
 # StockSync AI
 
-## Run locally in Visual Studio Code
+> StockSync AI helps store teams monitor stock cover, import sales history, and identify items that may need replenishment.
+
+## Team Information
+
+| Field | Details |
+| --- | --- |
+| **Team Name** | `[Add team name]` |
+| **Team Domain** | `[Choose Domain 1 or Domain 2 from the organizer's list]` |
+
+## Demo Links
+
+| Resource | Link |
+| --- | --- |
+| **Live Demo** | `[Add public Replit demo URL after publishing; this project is not currently published]` |
+| **Pitching Demo** | `[Add pitch presentation or demo video URL]` |
+
+## Project Overview
+
+StockSync uses imported sales history to calculate average daily use and estimated stock cover. The Inventory page highlights products with estimated cover of 7 days or less and suggests a replenishment quantity equal to 30 days of average use. Store teams can review suggestions, prepare purchase-order drafts, and track order status.
+
+### Key Features
+
+- Import sales from CSV or JSON and update stock and demand history.
+- Review estimated stock cover and suggested replenishment tasks.
+- Create purchase-order email drafts and track their status.
+- Restore the original supplied inventory dataset for a fresh demo.
+
+## How to Run
+
+### Run on Replit
+
+1. Open the Replit project.
+2. Click **Run** and open the StockSync AI web preview.
+
+The supplied inventory, supplier, and sales datasets load without a database setup or additional credentials.
+
+### Run locally in Visual Studio Code
 
 Install **Node.js 22.16+ LTS or Node.js 24 LTS** and **pnpm**. Open a terminal
 in the repository root (the folder containing `pnpm-workspace.yaml`), then run:
