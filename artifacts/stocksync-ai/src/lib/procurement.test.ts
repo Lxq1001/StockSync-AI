@@ -403,3 +403,28 @@ test('import preview deducts no more than available stock and flags overstocked 
   assert.equal(applied.salesTransactions?.filter(row => row.itemId === 'SKU1' && row.date === '2026-10-20').reduce((sum, row) => sum + row.quantity, 0), 14);
   assert.match(applied.audit[0].details, /12 units exceeded available stock/);
 });
+
+test('downloadable demo sales stay simple and leave at least one unit on hand', () => {
+  const data = initialData();
+  data.skus = data.skus.map((sku, index) => ({ ...sku, onHand: [5, 2, 1][index] ?? 20 }));
+  const csv = sampleCsv(data.skus, '2026-10-23');
+  const parsed = parseSalesFile('demo.csv', csv, data.skus);
+  assert.ok(parsed.ok);
+  if (!parsed.ok) return;
+  const preview = previewImport(data, parsed.rows);
+  assert.ok(preview.items.length > 0);
+  for (const item of preview.items) {
+    assert.ok(item.stockAfter >= 1, `${item.name} would have ${item.stockAfter} units`);
+    assert.equal(item.stockShortfall, 0);
+    assert.ok(item.importedQuantity <= 3);
+    assert.ok(item.importedQuantity > 0);
+  }
+
+  data.skus = data.skus.map(sku => ({ ...sku, onHand: 1 }));
+  const emptySales = parseSalesFile('demo.csv', sampleCsv(data.skus, '2026-10-23'), data.skus);
+  assert.ok(emptySales.ok);
+  if (emptySales.ok) {
+    const noStockChange = previewImport(data, emptySales.rows);
+    assert.ok(noStockChange.items.every(item => item.stockAfter === 1 && item.stockShortfall === 0));
+  }
+});

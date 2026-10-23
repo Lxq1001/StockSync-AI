@@ -141,6 +141,14 @@ export function applyImport(data: StoreData, preview: ImportPreview, actor: stri
 }
 export function sampleCsv(skus: SKU[], end = new Date().toISOString().slice(0, 10)): string {
   const lines = ['itemId,date,quantity'];
-  for (const s of skus.slice(0, 3)) for (let d = 6; d >= 0; d--) lines.push(`${s.id},${shift(end, -d)},${Math.max(0, Math.round(s.avgDailyDemand + ((d % 3) - 1)))}`);
+  const demoSkus = skus.filter(sku => sku.onHand > 1).slice(0, 3);
+  for (const sku of demoSkus) {
+    const quantity = Math.min(3, Math.max(0, Math.floor(sku.onHand - 1)));
+    for (let index = 0; index < quantity; index++) {
+      const daysAgo = [6, 3, 0][index];
+      lines.push(`${sku.id},${shift(end, -daysAgo)},1`);
+    }
+  }
+  if (lines.length === 1 && skus[0]) lines.push(`${skus[0].id},${end},0`);
   return lines.join('\n') + '\n';
 }

@@ -43,6 +43,7 @@ export function ImportModal({ data, update, toast, onClose, providedImportData }
       <div className="item-detail">Dates as YYYY-MM-DD, quantity 0 or more, itemId must match an inventory item. Max {IMPORT_MAX_BYTES / 1024} KB. This is not a database connection; SQL dumps and other formats are not supported. If any row is invalid, nothing is imported.</div>
       <div className="item-detail">Known item IDs: {data.skus.map(s => s.id).join(', ')}</div>
       <button type="button" className="inline-link link-button" onClick={download} data-testid="button-download-sample"><Download size={13} /> Download sample CSV</button>
+      <div className="item-detail">The sample uses small one-unit sales and adjusts to current stock, leaving at least one unit on hand.</div>
     </div>
     <label className="file-drop" data-testid="label-import-file">
       <FileUp size={18} /><span>{fileName || 'Choose a .csv or .json file'}</span>
