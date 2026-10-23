@@ -4,26 +4,6 @@ import { averageDailyUse, parseSalesFile, previewImport } from './sales-import';
 
 export type ProvidedDataset = StockDataset;
 
-const randomStartingStock = () => Math.floor(Math.random() * 16) + 15;
-const randomDemoStock = () => Math.floor(Math.random() * 3) + 5;
-
-function seedDemoSuggestions(data: StoreData): StoreData {
-  if (data.demoSuggestionsSeeded) return data;
-  const demoIds = new Set(
-    [...data.skus]
-      .filter(sku => sku.avgDailyDemand > 0)
-      .sort((a, b) => b.avgDailyDemand - a.avgDailyDemand || a.id.localeCompare(b.id))
-      .slice(0, 3)
-      .map(sku => sku.id),
-  );
-  return {
-    ...data,
-    demoSuggestionsSeeded: true,
-    skus: data.skus.map(sku => demoIds.has(sku.id) ? { ...sku, onHand: randomDemoStock() } : sku),
-    rejectedSuggestions: data.rejectedSuggestions.filter(id => !demoIds.has(id)),
-  };
-}
-
 function cleanStatusAuditDetails(data: StoreData): StoreData {
   return {
     ...data,
@@ -45,7 +25,8 @@ export function mergeSupplierContacts(data: StoreData, bundle: ProvidedDataset):
 
 export function providedWorkspace(bundle: ProvidedDataset): StoreData {
   const data = initialData();
-  data.startingStockRandomized = true;
+  data.startingStockRandomized = false;
+  data.demoSuggestionsSeeded = false;
   data.orders = []; data.audit = []; data.legacyOrders = [];
   data.suppliers = bundle.suppliers.map(s => ({
     id: s.supplier_id, name: s.name, email: s.email.trim(), contactMethod: 'Email', MOQ: 1, leadTimeDays: 2,
@@ -55,7 +36,7 @@ export function providedWorkspace(bundle: ProvidedDataset): StoreData {
     if (!suppliers.has(i.supplier_id)) throw new Error(`No supplier assigned for ${i.id}.`);
     if (![i.stock, i.item_price].every(n => Number.isFinite(n) && n >= 0)) throw new Error(`Invalid stock or price for ${i.id}.`);
     return {
-      id: i.id, name: i.name, category: i.category, onHand: randomStartingStock(), unitCost: i.item_price,
+      id: i.id, name: i.name, category: i.category, onHand: i.stock, unitCost: i.item_price,
       supplierId: i.supplier_id, unit: 'unit', avgDailyDemand: 0, recentSales: Array(7).fill(0),
       leadTimeDays: 2, reorderBuffer: 2, batchSize: 1,
     };
@@ -69,7 +50,7 @@ export function providedWorkspace(bundle: ProvidedDataset): StoreData {
   });
   data.lastImport = { importedAt: new Date().toISOString(), rows: preview.rows, windowStart: preview.windowStart, windowEnd: preview.windowEnd };
   data.salesTransactions = parsed.rows;
-  return seedDemoSuggestions(data);
+  return data;
 }
 
 /** Only supplied product and supplier IDs may survive from a saved workspace. */
@@ -89,13 +70,12 @@ export function loadProvidedWorkspace(current: StoreData, bundle: ProvidedDatase
   const hasHistory = history.length > 0;
   const merged = mergeSupplierContacts({
     ...current,
-    startingStockRandomized: true,
+    startingStockRandomized: false,
+    demoSuggestionsSeeded: false,
     skus: next.skus.map(s => {
       const saved = current.skus.find(old => old.id === s.id && old.supplierId === s.supplierId);
       const originalStock = bundle.inventory.find(item => item.id === s.id)?.stock;
-      const hasUserStock = current.startingStockRandomized
-        ? saved !== undefined
-        : saved !== undefined && saved.onHand !== originalStock;
+      const hasUserStock = saved !== undefined && saved.onHand !== originalStock;
       return saved ? { ...s, name: saved.name, ...(hasUserStock ? { onHand: saved.onHand } : {}), unitCost: saved.unitCost,
         ...(hasHistory ? { avgDailyDemand: averageDailyUse(saved.recentSales), recentSales: saved.recentSales } : {}) } : s;
     }),
@@ -106,7 +86,7 @@ export function loadProvidedWorkspace(current: StoreData, bundle: ProvidedDatase
     lastImport: hasHistory ? current.lastImport ?? next.lastImport : next.lastImport,
     salesTransactions: hasHistory ? history : next.salesTransactions,
   }, bundle);
-  return seedDemoSuggestions(cleanStatusAuditDetails(merged));
+  return cleanStatusAuditDetails(merged);
 }
 
 type DatasetStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;

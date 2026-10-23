@@ -83,33 +83,28 @@ test('suggestions include every eligible item without a five-item limit', () => 
   assert.deepEqual(suggestions(data).map(task => task.quantity), Array(8).fill(30));
 });
 
-test('demo workspace keeps ordinary starting stock at 15 to 30 and seeds three low-stock suggestions', () => {
+test('workspace starts from the exact static stock values in the supplied inventory', () => {
   const data = providedWorkspace(provided);
   assert.equal(data.skus.length, provided.inventory.length);
-  const demoIds = new Set(suggestions(data).map(task => task.sku.id));
-  assert.equal(demoIds.size, 3);
-  for (const sku of data.skus)
-    assert.ok(Number.isInteger(sku.onHand) && (demoIds.has(sku.id) ? sku.onHand >= 5 && sku.onHand <= 7 : sku.onHand >= 15 && sku.onHand <= 30), sku.name);
-  assert.equal(data.demoSuggestionsSeeded, true);
+  assert.deepEqual(data.skus.map(sku => sku.onHand), provided.inventory.map(item => item.stock));
+  assert.equal(data.startingStockRandomized, false);
+  assert.equal(data.demoSuggestionsSeeded, false);
 });
 
-test('existing workspaces seed demo suggestions once and preserve other edited quantities', () => {
+test('workspace refresh restores static stock while ordinary dataset refresh preserves edits', () => {
   const oldWorkspace = providedWorkspace(provided);
-  oldWorkspace.startingStockRandomized = undefined;
-  oldWorkspace.demoSuggestionsSeeded = undefined;
-  oldWorkspace.skus = oldWorkspace.skus.map(sku => ({
-    ...sku, onHand: provided.inventory.find(item => item.id === sku.id)!.stock,
-  }));
+  oldWorkspace.startingStockRandomized = true;
+  oldWorkspace.demoSuggestionsSeeded = true;
+  const editedSkuId = oldWorkspace.skus[0].id;
+  oldWorkspace.skus = oldWorkspace.skus.map(sku => sku.id === editedSkuId ? { ...sku, onHand: 42 } : sku);
   const migrated = loadProvidedWorkspace(oldWorkspace, provided);
-  assert.equal(migrated.startingStockRandomized, true);
-  assert.equal(migrated.demoSuggestionsSeeded, true);
-  assert.equal(suggestions(migrated).length, 3);
-  const demoIds = new Set(suggestions(migrated).map(task => task.sku.id));
-  const editedSkuId = oldWorkspace.skus.find(sku => !demoIds.has(sku.id))!.id;
-  const edited = { ...oldWorkspace, skus: oldWorkspace.skus.map(sku => sku.id === editedSkuId ? { ...sku, onHand: 42 } : sku) };
-  const migratedEdit = loadProvidedWorkspace(edited, provided);
-  assert.equal(migratedEdit.skus.find(sku => sku.id === editedSkuId)!.onHand, 42);
-  assert.equal(suggestions(migratedEdit).length, 3);
+  assert.equal(migrated.startingStockRandomized, false);
+  assert.equal(migrated.demoSuggestionsSeeded, false);
+  assert.equal(migrated.skus.find(sku => sku.id === editedSkuId)!.onHand, 42);
+  for (const sku of migrated.skus.filter(item => item.id !== editedSkuId))
+    assert.equal(sku.onHand, provided.inventory.find(item => item.id === sku.id)!.stock);
+  const reset = providedWorkspace(provided);
+  assert.deepEqual(reset.skus.map(sku => sku.onHand), provided.inventory.map(item => item.stock));
 });
 
 test('the seven-unit threshold is inclusive, not seven days of cover or batch rounding', () => {
@@ -236,7 +231,10 @@ test('provided import accepts receipt objects and arrays, subtracting stock and 
   for (const sku of data.skus) {
     const importedQuantity = parsed.rows.filter(row => row.itemId === sku.id).reduce((sum, row) => sum + row.quantity, 0);
     assert.equal(next.skus.find(item => item.id === sku.id)?.onHand, Math.max(0, sku.onHand - importedQuantity));
+    assert.ok(next.skus.find(item => item.id === sku.id)!.onHand >= 1);
   }
+  const reset = providedWorkspace(provided);
+  assert.deepEqual(reset.skus.map(sku => sku.onHand), provided.inventory.map(item => item.stock));
   assert.equal(next.salesTransactions?.length, 97);
   assert.equal(applyImport(next, preview, 'Tester').salesTransactions?.length, 97);
 });

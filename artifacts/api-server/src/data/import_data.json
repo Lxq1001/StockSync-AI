@@ -117,7 +117,7 @@
       },
       {
         "id": "SKU7",
-        "quantity": 3.0
+        "quantity": 2.0
       }
     ],
     "orderDate": "Wed Oct 14 2026"
@@ -144,7 +144,7 @@
       },
       {
         "id": "SKU7",
-        "quantity": 2.0
+        "quantity": 1.0
     }
     ],
     "orderDate": "Wed Oct 14 2026"
@@ -200,7 +200,7 @@
     "items": [
       {
         "id": "SKU15",
-        "quantity": 3.0
+        "quantity": 2.0
       },
       {
         "id": "SKU1",
@@ -269,7 +269,7 @@
     "items":
       {
         "id": "SKU7",
-        "quantity": 2.0
+        "quantity": 1.0
       },
     "orderDate": "Fri Oct 16 2026"
    },
@@ -333,7 +333,7 @@
       },
       {
         "id": "SKU7",
-        "quantity": 2.0
+        "quantity": 1.0
       }
     ],
     "orderDate": "Sat Oct 17 2026"
