@@ -74,7 +74,7 @@ export function suggestions(data: StoreData): Suggestion[] {
 }
 
 const lowCoverSuggestionQuantity = (sku: SKU) => sku.avgDailyDemand * REORDER_DAYS;
-/** Inventory-card tasks use estimated cover, independently of the overview's on-hand suggestions. */
+/** Shared AI tasks for Inventory and Overview, based on estimated cover. */
 export function lowCoverSuggestions(data: StoreData): Suggestion[] {
   return data.skus
     .filter(s => isLowCover(s) && s.avgDailyDemand > 0 && !data.rejectedSuggestions.includes(s.id))

@@ -124,6 +124,31 @@ test('workspace starts from the exact static stock values in the supplied invent
   assert.equal(data.demoSuggestionsSeeded, false);
 });
 
+test('cover-based task counts recalculate from restored, imported, and reloaded stock', () => {
+  const baseline = providedWorkspace(provided);
+  const expectedIds = (data: StoreData) => data.skus
+    .filter(sku => sku.avgDailyDemand > 0 && sku.onHand / sku.avgDailyDemand <= 7 && !data.rejectedSuggestions.includes(sku.id))
+    .map(sku => sku.id).sort();
+  const taskIds = (data: StoreData) => lowCoverSuggestions(data).map(task => task.sku.id).sort();
+  const eligible = lowCoverSuggestions(baseline);
+  assert.ok(eligible.some(task => task.sku.onHand > 7));
+  const dismissed = rejectSuggestion(baseline, eligible[0].sku.id);
+  assert.equal(lowCoverSuggestions(dismissed).length, eligible.length - 1);
+
+  const storage = new MemStore();
+  saveStore(storage, dismissed);
+  const restored = roundTrip(storage, providedWorkspace(provided));
+  assert.deepEqual(taskIds(restored), expectedIds(baseline));
+  assert.deepEqual(restored.rejectedSuggestions, []);
+
+  const parsed = parseSalesFile('sales.csv', `itemId,date,quantity\n${restored.skus[0].id},2026-10-20,1\n`, restored.skus);
+  assert.ok(parsed.ok);
+  if (!parsed.ok) return;
+  const imported = applyImport(restored, previewImport(restored, parsed.rows), 'Aina Rahman');
+  assert.deepEqual(taskIds(imported), expectedIds(imported));
+  assert.deepEqual(taskIds(roundTrip(storage, imported)), taskIds(imported));
+});
+
 test('workspace refresh restores static stock while ordinary dataset refresh preserves edits', () => {
   const oldWorkspace = providedWorkspace(provided);
   oldWorkspace.startingStockRandomized = true;
