@@ -1,5 +1,9 @@
 import type { ProvidedDataset } from './provided-dataset';
 
+export async function fetchProvidedDataset(fetcher: typeof fetch = fetch): Promise<ProvidedDataset> {
+  return readDatasetResponse(await fetcher('/api/stock-dataset', { cache: 'no-store' }));
+}
+
 export async function readDatasetResponse(response: Response): Promise<ProvidedDataset> {
   if (!response.ok) throw new Error('The supplied datasets could not be loaded. Check that the API server is running, then retry.');
   if (!response.headers.get('content-type')?.includes('application/json')) {

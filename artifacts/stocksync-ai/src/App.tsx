@@ -11,7 +11,7 @@ import { TemplatePage } from '@/pages/template';
 import { ActivityPage } from '@/pages/activity';
 import { buildDraft, loadStore, saveStore, setDraft, type StoreData } from '@/lib/procurement';
 import { activateProvidedWorkspace, mergeSupplierContacts, providedWorkspace, type ProvidedDataset } from '@/lib/provided-dataset';
-import { readDatasetResponse } from '@/lib/dataset-request';
+import { fetchProvidedDataset } from '@/lib/dataset-request';
 
 const storage = (() => { try { return typeof window !== 'undefined' ? window.localStorage : undefined; } catch { return undefined; } })();
 
@@ -25,6 +25,7 @@ function Workspace() {
   const [datasetError, setDatasetError] = useState('');
   const [datasetAttempt, setDatasetAttempt] = useState(0);
   const [datasetReady, setDatasetReady] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [open, setOpen] = useState(() => typeof window === 'undefined' || !window.matchMedia('(max-width: 680px)').matches);
   const [, navigate] = useLocation();
   useEffect(() => { if (!notice) return; const t = window.setTimeout(() => setNotice(''), 7000); return () => window.clearTimeout(t); }, [notice]);
@@ -36,7 +37,7 @@ function Workspace() {
   useEffect(() => {
     let cancelled = false;
     setDatasetError('');
-    fetch('/api/stock-dataset').then(readDatasetResponse).then(bundle => {
+    fetchProvidedDataset().then(bundle => {
       if (cancelled) return;
       const result = activateProvidedWorkspace(dataRef.current, bundle, storage);
       setDataset(bundle);
@@ -52,9 +53,25 @@ function Workspace() {
       return setDraft(current, buildDraft(current, skuId, qty));
     })) navigate('/template');
   };
-  const reset = () => { if (dataset && window.confirm('Restore only the supplied datasets? Local edits, orders, drafts and activity will be erased.') && update(() => providedWorkspace(dataset))) toast('Supplied datasets restored.'); };
+  const reset = async () => {
+    if (resetting || !datasetReady || !window.confirm('Restore the original supplied JSON stock and sales data? Imported sales, local edits, orders, drafts and activity will be erased.')) return;
+    setResetting(true);
+    try {
+      const latest = await fetchProvidedDataset();
+      const restored = providedWorkspace(latest);
+      if (update(() => restored)) {
+        setDataset(latest);
+        setImporting(false);
+        toast('Original supplied JSON stock and sales data restored.');
+      }
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Could not restore the supplied datasets. Your workspace has not been changed.');
+    } finally {
+      setResetting(false);
+    }
+  };
   const props = { data, update, toast };
-  return <Shell open={open} setOpen={setOpen} right={<button className="store-chip" onClick={reset} disabled={!datasetReady} data-testid="button-reset-demo"><span className="online-dot" /> Local workspace <RotateCcw size={12} /></button>}>
+  return <Shell open={open} setOpen={setOpen} right={<button className="store-chip" onClick={reset} disabled={!datasetReady || resetting} data-testid="button-reset-demo"><span className="online-dot" /> {resetting ? 'Restoring…' : 'Local workspace'} <RotateCcw size={12} /></button>}>
     {datasetError && <div className="form-error" role="alert" style={{ margin: '16px 40px' }}>{datasetError} <button className="button small" onClick={() => setDatasetAttempt(n => n + 1)}>Retry</button></div>}
     {!datasetReady && !datasetError && <main className="content" role="status">Loading supplied datasets…</main>}
     {datasetReady && <Switch>

@@ -8,7 +8,7 @@ import {
 import { applyImport, averageDailyUse, parseCsv, parseSalesFile, previewImport, sampleCsv } from './sales-import';
 import { activateProvidedWorkspace, loadProvidedWorkspace, mergeSupplierContacts, providedWorkspace } from './provided-dataset';
 import type { ProvidedDataset } from './provided-dataset';
-import { readDatasetResponse } from './dataset-request';
+import { fetchProvidedDataset, readDatasetResponse } from './dataset-request';
 
 const fixture = (name: string) => JSON.parse(readFileSync(new URL(`../../../api-server/src/data/${name}`, import.meta.url), 'utf8'));
 const provided: ProvidedDataset = {
@@ -16,6 +16,23 @@ const provided: ProvidedDataset = {
   salesTransactions: fixture('sales_transaction.json'), importData: fixture('import_data.json'),
 };
 const initialData = () => providedWorkspace(provided);
+
+test('restore fetches a fresh dataset without using a browser-cached response', async () => {
+  let calls = 0;
+  const fetcher: typeof fetch = async (url, options) => {
+    assert.equal(url, '/api/stock-dataset');
+    assert.equal(options?.cache, 'no-store');
+    calls++;
+    const latest = { ...provided, inventory: provided.inventory.map(item => ({ ...item, stock: calls === 1 ? 25 : 15 })) };
+    return new Response(JSON.stringify(latest), { headers: { 'content-type': 'application/json' } });
+  };
+  const before = await fetchProvidedDataset(fetcher);
+  const restored = providedWorkspace(await fetchProvidedDataset(fetcher));
+  assert.equal(before.inventory[0].stock, 25);
+  assert.equal(calls, 2);
+  assert.ok(restored.skus.every(sku => sku.onHand === 15));
+  await assert.rejects(fetchProvidedDataset(async () => { throw new Error('Network unavailable'); }), /Network unavailable/);
+});
 
 test('a provider-accepted send stores the real sender and receipt without claiming delivery', () => {
   const data = initialData();
