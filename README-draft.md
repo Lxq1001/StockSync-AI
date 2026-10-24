@@ -69,9 +69,6 @@ The current demo uses deterministic calculations and rules; it does not call an 
 │   └── api-server/         # API server and supplied JSON datasets
 ├── lib/                    # Shared workspace libraries
 ├── scripts/                # Local development and workspace scripts
-├── runpod/
-│   └── handler.py          # Standalone helper; not deployed to RunPod
-├── main.py                 # Separate Python wrapper; not started by the app workflows
 ├── package.json            # Workspace commands
 ├── pnpm-workspace.yaml
 ├── .env.example
@@ -135,7 +132,7 @@ pnpm run typecheck
 
 ## How We Use RunPod *(Required by organizer template)*
 
-**RunPod is not currently used by this project.** The repository contains `runpod/handler.py` and a separate `main.py` Python wrapper, but the app's Replit workflows do not start that Python service, the web app does not call it, and no RunPod endpoint is configured. The current stock suggestions are calculated in the application without RunPod.
+**RunPod is not currently used by this project.** There is no RunPod endpoint configured or called by the web app. The current stock suggestions are calculated in the application without RunPod.
 
 Do not list a RunPod endpoint or claim RunPod usage unless the team integrates and verifies an actual endpoint. If RunPod use is mandatory for submission, confirm the requirement with the organizer and complete a real integration before adding proof of use.
 
