@@ -19,7 +19,7 @@ StockSync AI is a predictive inventory management demo that helps retailers moni
 | --------------------- | ------------------------------------------------ |
 | **GitHub Repository** | https://github.com/Lxq1001/StockSync-AI                |
 | **Live Demo**         | https://stock-sync-ai.replit.app    |
-| **Live Demo**         | https://canva.link/ywfvc9k4z39gmaq    |
+| **Slide Deck**         | https://canva.link/ywfvc9k4z39gmaq    |
 | **Demo Video**     | https://youtu.be/bbFCNg9W7RY |
 
 ## Overview
@@ -209,6 +209,7 @@ The JSON files are the static source data. Imports and edits update the browser-
 ### Option 1 — Run the Live Prototype
 
 Open StockSync AI: https://stock-sync-ai.replit.app
+
 No setup is required.
 
 ### Option 2 — Run Locally
@@ -244,7 +245,7 @@ Open the local address shown in the terminal. The development application is exp
 - **Development and preview:** Replit workflows run the web application and API server.
 - **Deployment:** The app is deployed with Replit Deployments at the Live Demo link above.
 - **Credentials:** The inventory demo does not require API credentials. Do not commit secrets to GitHub.
-- **Proof of use:** [`submission/REPLIT PROOF OF USE.pdf`]
+- **Proof of use:** [`submission/REPLIT PROOF OF USE.pdf`](submission/REPLIT%20PROOF%20OF%20USE.pdf)
 
 ## RunPod
 
@@ -259,12 +260,10 @@ RunPod is not currently used by StockSync AI. The project has no RunPod endpoint
 
 ## Future Improvements
 
-- **Improve Data Accuracy:** Ensure inventory and sales data are accurate, complete and up to date to generate more reliable restocking recommendations.
-- **Adapt to Demand and Supply Changes:** Improve the system’s ability to account for unexpected changes in customer demand, supplier delays and stock availability.
-- **Automate Supplier Communication Tracking:** Integrate email monitoring to detect supplier replies and negotiation outcomes, enabling purchase order statuses to be updated automatically where appropriate.
-- **Enhance Order Status Management:** Reduce manual updates by linking supplier communications with purchase order status tracking.
-- **Improve Data Persistence and Scalability:** Consider replacing local JSON files with a suitable database to support more reliable data storage, concurrent access and future growth.
-- **Strengthen End-to-End Automation:** Further streamline the restocking and supplier ordering process while maintaining human review and approval where necessary.
+- [] **Improve Data Accuracy:** Ensure inventory and sales data are accurate, complete and up to date to generate more reliable restocking recommendations.
+- [] **Adapt to Demand and Supply Changes:** Improve the system’s ability to account for unexpected changes in customer demand, supplier delays and stock availability.
+- [] **Automate Supplier Communication Tracking:** Integrate email monitoring to detect supplier replies and negotiation outcomes, enabling purchase order statuses to be updated automatically where appropriate.
+- [] **Strengthen End-to-End Automation:** Further streamline the restocking and supplier ordering process while maintaining human review and approval where necessary.
 
 ## Team
 
