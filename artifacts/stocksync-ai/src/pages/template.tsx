@@ -36,7 +36,7 @@ export function TemplatePage({ data, update, toast }: PageProps) {
         throw new Error('The saved draft changed. The earlier Gmail template cannot be recorded as this order.');
       const result = sendDraft(d, handoff); id = result.order.id; return result.data;
     });
-    if (ok) { toast(`${id} recorded as Sent based on your confirmation. Gmail delivery is not verified.`); navigate('/purchase-orders'); }
+    if (ok) { toast(`${id} recorded as Sent based on your confirmation.`); navigate('/purchase-orders'); }
     else { setError('Could not record the order. The draft has been kept; do not send another email.'); sendingRef.current = false; setSending(false); }
   };
   const discard = () => {
