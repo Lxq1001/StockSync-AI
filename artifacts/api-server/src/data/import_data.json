@@ -301,11 +301,11 @@
     "items": [
       {
         "id": "SKU11",
-        "quantity": 1.0
+        "quantity": 2.0
       },
       {
-        "id": "SKU11",
-        "quantity": 1.0
+        "id": "SKU15",
+        "quantity": 3.0
       }
     ],
     "orderDate": "Sat Oct 17 2026"
