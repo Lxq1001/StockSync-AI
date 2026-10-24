@@ -6,4 +6,3 @@
 - [Local routing boundary](local-routing-boundary.md) — standalone VS Code runs need their own frontend/API router; a Vite page returning HTML is not dataset JSON.
 - [Shared mailbox boundaries](shared-mailbox-boundaries.md) — default to a filled Gmail composer without setup; never infer sending from opening it. Keep legacy API safeguards.
 - [Inventory reorder policy](inventory-reorder-policy.md) — AI tasks use estimated cover ≤ 7 days on Inventory and Overview; restore exact supplied stock.
-- [README edit scope](readme-edit-scope.md) — for targeted README changes, preserve all unrelated sections and content.
