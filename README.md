@@ -83,35 +83,43 @@ The JSON files are the static source data. Imports and edits update the browser-
 
 ## How to Run
 
-### Run on Replit
+### Option 1 — Run on Replit
 
-1. Open the Replit project.
-2. Click **Run**.
-3. Open the StockSync AI web preview.
+Open the project's Replit workspace.
 
-The supplied datasets load through the project API. No external database or API credentials are needed to run the inventory demo.
+Make sure the required dependencies and environment variables are configured.
 
-### Run locally
+Use the project's configured Run command.
 
-Install **Node.js 22.16+ LTS or Node.js 24 LTS** and **pnpm**. From the repository root, run:
+Open the application preview to interact with StockSync AI.
 
-```sh
+Replit Project: [Add your Replit project URL]
+
+Confirm the actual Replit setup and run command before submitting these instructions.
+
+### Option 2 — Run Locally
+
+Make sure Node.js and pnpm are installed, then run the following commands from the project directory:
+
+```powershell
+# 1. Install project dependencies
 pnpm install
+
+# 2. If it shows an error, run:
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+# Then continue with:
+pnpm install
+
+# 3. Approve dependency build scripts
+pnpm approve-builds
+# Press <space> to select, <enter> to confirm, then "y" to confirm.
+
+# 4. Start the development server
 pnpm dev
 ```
 
-Wait for the terminal to display **StockSync is ready**, then open **http://localhost:3000**. Keep the terminal running while using the app; press **Ctrl+C** to stop it.
-
-Use the root `pnpm dev` command so the frontend and API are both started with the local router. Opening the frontend-only Vite port directly will not route dataset requests correctly.
-
-### Run tests
-
-```sh
-pnpm test:local
-pnpm --filter @workspace/stocksync-ai test
-pnpm --filter @workspace/api-server test
-pnpm run typecheck
-```
+Open the local address shown in the terminal. The development application is expected to be available at **http://localhost:3000**.
 
 ## How We Use Replit
 
@@ -124,15 +132,21 @@ pnpm run typecheck
 
 RunPod is not currently used by StockSync AI. The project has no RunPod endpoint configured or called; inventory suggestions are calculated by application rules.
 
-## Challenges and Learnings
+## Challenges & Learnings
 
-- `[Add a challenge the team encountered and how it was addressed.]`
-- `[Add a key lesson learned during the project.]`
+- Inventory data handling: Working with inventory and sales data highlighted the importance of keeping information organised and usable.
+- Workflow integration: Connecting inventory monitoring, restocking suggestions and supplier communication helped us understand how different steps can be brought together in one application.
+- User-centred design: We learned the importance of presenting stock information and recommendations clearly so users can review them before taking action.
+- Testing and reliability: We learned that application workflows, configuration and external integrations need to be tested before deployment.
 
 ## Future Improvements
 
-- `[Add a planned improvement.]`
-- `[Add another planned improvement.]`
+- **Improve Data Accuracy:** Ensure inventory and sales data are accurate, complete, and up to date to generate more reliable restocking recommendations.
+- **Adapt to Demand and Supply Changes:** Improve the system’s ability to account for unexpected changes in customer demand, supplier delays, and stock availability.
+- **Automate Supplier Communication Tracking:** Integrate email monitoring to detect supplier replies and negotiation outcomes, enabling purchase order statuses to be updated automatically where appropriate.
+- **Enhance Order Status Management:** Reduce manual updates by linking supplier communications with purchase order status tracking.
+- **Improve Data Persistence and Scalability:** Consider replacing local JSON files with a suitable database to support more reliable data storage, concurrent access, and future growth.
+- **Strengthen End-to-End Automation:** Further streamline the restocking and supplier ordering process while maintaining human review and approval where necessary.
 
 ## Team
 
