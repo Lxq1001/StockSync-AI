@@ -1,6 +1,6 @@
 # StockSync AI
 
-StockSync AI is a predictive inventory management demo that helps retailers monitor stock, review sales-based replenishment suggestions, and organize supplier ordering.
+StockSync AI is a predictive inventory management demo that helps retailers monitor stock, review sales-based replenishment suggestions and organize supplier ordering.
 
 ## Team Information
 
@@ -17,16 +17,16 @@ StockSync AI is a predictive inventory management demo that helps retailers moni
 
 | Resource              | Link                                             |
 | --------------------- | ------------------------------------------------ |
-| **GitHub Repository** | `[Add the GitHub repository URL]`                |
-| **Replit Project**    | `[Add the Replit project URL]`                   |
-| **Live Demo**         | `[Add the published demo URL when available]`    |
-| **Pitching Demo**     | `[Add the pitch presentation or demo video URL]` |
+| **GitHub Repository** | https://github.com/Lxq1001/StockSync-AI                |
+| **Live Demo**         | https://stock-sync-ai.replit.app    |
+| **Live Demo**         | https://canva.link/ywfvc9k4z39gmaq    |
+| **Demo Video**     | https://youtu.be/bbFCNg9W7RY |
 
 ## Overview
 
 ### Problem
 
-Retailers need to keep track of stock, sales activity, and supplier orders. When this information is handled manually or separately, it can be difficult to identify which products need attention and prepare replenishment orders efficiently.
+Retailers need to keep track of stock, sales activity and supplier orders. When this information is handled manually or separately, it can be difficult to identify which products need attention and prepare replenishment orders efficiently.
 
 ### Solution
 
@@ -55,21 +55,144 @@ The current demo uses deterministic, rule-based calculations. It does not call a
 
 ## Project Structure
 
-```text
+```
 .
-├── artifacts/
-│   ├── api-server/
-│   │   └── src/data/
-│   │       ├── import_data.json
-│   │       ├── mock_db.json
-│   │       ├── sales_transaction.json
-│   │       └── suppliers.json
-│   └── stocksync-ai/       # React and Vite web app
-├── lib/                    # Shared API and type libraries
-├── scripts/                # Local development launcher and checks
-├── package.json            # Root workspace commands
-├── pnpm-workspace.yaml
-└── README.md
+|-- artifacts/
+|   |-- stocksync-ai/                         Main StockSync AI web app
+|   |   |-- .replit-artifact/
+|   |   |   `-- artifact.toml
+|   |   |-- public/
+|   |   |   |-- favicon.svg
+|   |   |   |-- logo.svg
+|   |   |   `-- robots.txt
+|   |   |-- src/
+|   |   |   |-- components/
+|   |   |   |   |-- common.tsx
+|   |   |   |   |-- error-boundary.tsx
+|   |   |   |   |-- import-modal.tsx
+|   |   |   |   |-- item-modals.tsx
+|   |   |   |   |-- shell.tsx
+|   |   |   |   `-- ui/                         Shared UI components
+|   |   |   |-- hooks/
+|   |   |   |   |-- use-mobile.tsx
+|   |   |   |   `-- use-toast.ts
+|   |   |   |-- lib/
+|   |   |   |   |-- dataset-request.ts
+|   |   |   |   |-- procurement.ts
+|   |   |   |   |-- procurement.test.ts
+|   |   |   |   |-- provided-dataset.ts
+|   |   |   |   |-- sales-import.ts
+|   |   |   |   `-- utils.ts
+|   |   |   |-- pages/
+|   |   |   |   |-- activity.tsx
+|   |   |   |   |-- inventory.tsx
+|   |   |   |   |-- not-found.tsx
+|   |   |   |   |-- orders.tsx
+|   |   |   |   |-- overview.tsx
+|   |   |   |   `-- template.tsx
+|   |   |   |-- App.tsx
+|   |   |   |-- index.css
+|   |   |   `-- main.tsx
+|   |   |-- components.json
+|   |   |-- index.html
+|   |   |-- package.json
+|   |   |-- tsconfig.json
+|   |   `-- vite.config.ts
+|   |
+|   |-- api-server/                            Stock and email API
+|   |   |-- .replit-artifact/
+|   |   |   `-- artifact.toml
+|   |   |-- src/
+|   |   |   |-- data/
+|   |   |   |   |-- import_data.json
+|   |   |   |   |-- mock_db.json
+|   |   |   |   |-- sales_transaction.json
+|   |   |   |   `-- suppliers.json
+|   |   |   |-- lib/
+|   |   |   |   |-- email-outbox.ts
+|   |   |   |   |-- email-policy.ts
+|   |   |   |   |-- email-provider.ts
+|   |   |   |   |-- email.test.ts
+|   |   |   |   `-- logger.ts
+|   |   |   |-- middlewares/
+|   |   |   |-- routes/
+|   |   |   |   |-- email.ts
+|   |   |   |   |-- health.ts
+|   |   |   |   `-- index.ts
+|   |   |   |-- app.ts
+|   |   |   `-- index.ts
+|   |   |-- build.mjs
+|   |   |-- development.mjs
+|   |   |-- package.json
+|   |   `-- tsconfig.json
+|   |
+|   `-- mockup-sandbox/                        Separate design preview workspace
+|       |-- .replit-artifact/
+|       |   `-- artifact.toml
+|       |-- src/
+|       |   |-- components/
+|       |   |   |-- mockups/                   Saved visual mockup
+|       |   |   `-- ui/                        Shared UI component files
+|       |   |-- hooks/
+|       |   |-- lib/
+|       |   |-- App.tsx
+|       |   |-- index.css
+|       |   `-- main.tsx
+|       |-- components.json
+|       |-- index.html
+|       |-- mockupPreviewPlugin.ts
+|       |-- package.json
+|       |-- tsconfig.json
+|       `-- vite.config.ts
+|
+|-- lib/                                       Shared workspace packages
+|   |-- api-client-react/                      Generated API client
+|   |   |-- src/
+|   |   |   |-- generated/
+|   |   |   |-- custom-fetch.ts
+|   |   |   `-- index.ts
+|   |   `-- package.json
+|   |-- api-spec/
+|   |   |-- openapi.yaml                       API contract
+|   |   |-- orval.config.ts
+|   |   `-- package.json
+|   `-- api-zod/                               Generated API schemas and types
+|       |-- src/generated/
+|       `-- package.json
+|
+|-- scripts/
+|   |-- src/
+|   |   |-- check-package-manager.mjs
+|   |   |-- dev-local.mjs
+|   |   |-- hello.ts
+|   |   |-- local-gateway.mjs
+|   |   |-- local-gateway.test.mjs
+|   |   |-- pnpm-command.mjs
+|   |   `-- pnpm-command.test.mjs
+|   |-- package.json
+|   |-- post-merge.sh
+|   `-- tsconfig.json
+|
+|-- submission/
+|   |-- REPLIT PROOF OF USE.pdf
+|   `-- SDC2026_404 Sleep Not Found_Preliminary.pdf
+|   `-- SDC2026_404 Sleep Not Found_TechDeclaration.pdf
+|
+|-- .env.example
+|-- .gitignore
+|-- .npmrc
+|-- .replit
+|-- .replitignore
+|-- LICENSE
+|-- package.json
+|-- pnpm-lock.yaml
+|-- pnpm-workspace.yaml
+|-- pyproject.toml                           Legacy Python setup; not used by app workflows
+|-- README.md
+|-- replit.md
+|-- tsconfig.base.json
+|-- tsconfig.json
+`-- uv.lock                                  Legacy Python lockfile; not used by app workflows
 ```
 
 ### Data files
@@ -83,39 +206,34 @@ The JSON files are the static source data. Imports and edits update the browser-
 
 ## How to Run
 
-### Option 1 — Run on Replit
+### Option 1 — Run the Live Prototype
 
-Open the project's Replit workspace.
-
-Make sure the required dependencies and environment variables are configured.
-
-Use the project's configured Run command.
-
-Open the application preview to interact with StockSync AI.
-
-Replit Project: [Add your Replit project URL]
-
-Confirm the actual Replit setup and run command before submitting these instructions.
+Open StockSync AI: https://stock-sync-ai.replit.app
+No setup is required.
 
 ### Option 2 — Run Locally
 
-Make sure Node.js and pnpm are installed, then run the following commands from the project directory:
+Make sure Node.js and pnpm are installed, then run the following commands:
 
 ```powershell
-# 1. Install project dependencies
+# 1. Clone the repository:
+git clone https://github.com/Lxq1001/StockSync-AI
+cd StockSync-AI
+
+# 2. Install project dependencies:
 pnpm install
 
-# 2. If it shows an error, run:
+# 3. If it shows a security error, run:
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
-# Then continue with:
+# 4. Then continue with:
 pnpm install
 
-# 3. Approve dependency build scripts
+# 5. Approve dependency build scripts:
 pnpm approve-builds
 # Press <space> to select, <enter> to confirm, then "y" to confirm.
 
-# 4. Start the development server
+# 6. Start the development server:
 pnpm dev
 ```
 
@@ -124,13 +242,13 @@ Open the local address shown in the terminal. The development application is exp
 ## How We Use Replit
 
 - **Development and preview:** Replit workflows run the web application and API server.
-- **Deployment:** Add the public Live Demo URL above after publishing.
+- **Deployment:** The app is deployed with Replit Deployments at the Live Demo link above.
 - **Credentials:** The inventory demo does not require API credentials. Do not commit secrets to GitHub.
-- **Proof of use:** `[Add the organizer-required Replit proof-of-use document if applicable]`
+- **Proof of use:** [`submission/REPLIT PROOF OF USE.pdf`]
 
 ## RunPod
 
-RunPod is not currently used by StockSync AI. The project has no RunPod endpoint configured or called; inventory suggestions are calculated by application rules.
+RunPod is not currently used by StockSync AI. The project has no RunPod endpoint configured or called.
 
 ## Challenges & Learnings
 
@@ -141,27 +259,27 @@ RunPod is not currently used by StockSync AI. The project has no RunPod endpoint
 
 ## Future Improvements
 
-- **Improve Data Accuracy:** Ensure inventory and sales data are accurate, complete, and up to date to generate more reliable restocking recommendations.
-- **Adapt to Demand and Supply Changes:** Improve the system’s ability to account for unexpected changes in customer demand, supplier delays, and stock availability.
+- **Improve Data Accuracy:** Ensure inventory and sales data are accurate, complete and up to date to generate more reliable restocking recommendations.
+- **Adapt to Demand and Supply Changes:** Improve the system’s ability to account for unexpected changes in customer demand, supplier delays and stock availability.
 - **Automate Supplier Communication Tracking:** Integrate email monitoring to detect supplier replies and negotiation outcomes, enabling purchase order statuses to be updated automatically where appropriate.
 - **Enhance Order Status Management:** Reduce manual updates by linking supplier communications with purchase order status tracking.
-- **Improve Data Persistence and Scalability:** Consider replacing local JSON files with a suitable database to support more reliable data storage, concurrent access, and future growth.
+- **Improve Data Persistence and Scalability:** Consider replacing local JSON files with a suitable database to support more reliable data storage, concurrent access and future growth.
 - **Strengthen End-to-End Automation:** Further streamline the restocking and supplier ordering process while maintaining human review and approval where necessary.
 
 ## Team
 
 | Name                     | Role         | GitHub                     |
 | ------------------------ | ------------ | -------------------------- |
-| Ling Xin Qi              | Team Leader  | `[Add GitHub profile URL]` |
-| `[Add team member name]` | `[Add role]` | `[Add GitHub profile URL]` |
-| `[Add team member name]` | `[Add role]` | `[Add GitHub profile URL]` |
+| Ling Xin Qi              | Group Leader  | https://github.com/Lxq1001 |
+| Chia Lee En | Group Member | https://github.com/chialeeen |
+| Ooi Wan Ting | Group Member | https://github.com/WanTing30 |
 
 ## Submission Checklist
 
 - [x] Team name, domain, SDG track, team leader, university, and member count included
-- [ ] GitHub, Replit, Live Demo, and Pitching Demo links added
-- [ ] Replit proof-of-use document added if required
-- [ ] Challenges, learnings, and team member details completed
+- [x] GitHub, Replit, Live Demo, and Pitching Demo links added
+- [x] Replit proof-of-use document added if required
+- [x] Challenges, learnings, and team member details completed
 - [x] How-to-run steps checked against the project scripts
 - [x] No API keys or secrets included in this README
 
