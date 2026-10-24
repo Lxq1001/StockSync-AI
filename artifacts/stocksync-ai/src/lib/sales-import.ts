@@ -1,4 +1,5 @@
 import type { SKU, StoreData } from './procurement';
+import { completedSuggestionIds } from './procurement';
 
 /**
  * Local sales import. Supported formats ONLY:
@@ -132,6 +133,7 @@ export function applyImport(data: StoreData, preview: ImportPreview, actor: stri
     ...data,
     skus: data.skus.map(s => { const p = byId.get(s.id); return p ? { ...s, onHand: p.stockAfter, avgDailyDemand: p.after, recentSales: p.recentSales } : s; }),
     rejectedSuggestions: data.rejectedSuggestions.filter(id => !byId.has(id)),
+    completedSuggestions: completedSuggestionIds(data).filter(id => !byId.has(id)),
     salesTransactions: [...(data.salesTransactions ?? []).filter(r => typeof r.itemId === 'string' && !incomingDays.has(`${r.itemId}:${r.date}`)), ...preview.salesRows],
     lastImport: { importedAt: new Date().toISOString(), rows: preview.rows, windowStart: preview.windowStart, windowEnd: preview.windowEnd },
     audit: [{ id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()), timestamp: new Date().toISOString(), actor, action: 'Imported sales', details: `${preview.rows} rows · ${preview.items.length} items · demand window ${preview.windowStart} to ${preview.windowEnd} · stock deducted up to available quantity` }, ...data.audit],

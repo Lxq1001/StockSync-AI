@@ -40,7 +40,7 @@ export function InventoryPage({ data, update, toast, startDraft }: PageProps & {
           <td><span className="forecast urgent">{formatCover(t.sku)}</span></td>
           <td><div className="row-actions start"><button className="button small primary" onClick={() => startDraft(t.sku.id, t.quantity)} data-testid={`button-approve-task-${t.sku.id}`}><Check /> Approve</button><button className="button small danger" onClick={() => promptReject(t.sku.id, t.sku.name)} data-testid={`button-reject-task-${t.sku.id}`}><X /> Reject</button></div></td>
         </tr>)}</tbody></table></div>
-        : <Empty title="No suggested tasks" detail="Suggestions require estimated cover of 7 days or less and recent sales. Eligible suggestions may also have been rejected." />}
+        : <Empty title="No suggested tasks" detail="Suggestions require estimated cover of 7 days or less and recent sales. Eligible suggestions may already have been ordered or rejected." />}
     </section>
     <div className="stats" style={{ marginTop: 16 }}>
     <Stat label="Items" value={data.skus.length} icon={<Package />} />

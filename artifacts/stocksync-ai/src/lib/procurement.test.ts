@@ -45,6 +45,7 @@ test('a provider-accepted send stores the real sender and receipt without claimi
   assert.equal(sent.order.send?.note, 'Real email accepted by Gmail');
   assert.equal(sent.order.send?.from, receipt.from);
   assert.deepEqual(sent.order.send?.receipt, receipt);
+  assert.ok(sent.data.completedSuggestions?.includes(draft.itemId));
   assert.equal(sent.data.draft, undefined);
   assert.match(sent.data.audit[0].details, /delivery not verified/);
   const storage = new MemStore();
@@ -232,6 +233,51 @@ test('Gmail composer carries the saved recipient, subject, Unicode and full mult
   assert.equal(url.searchParams.get('body'), content.body);
   assert.equal(new URL(buildGmailComposeUrl(draft)).searchParams.get('body'), draft.body);
   assert.equal(JSON.stringify(data), before, 'building a Gmail link must not create an order or send');
+});
+
+test('confirmed send completes only that suggestion, persists, and allows fresh imports or reset to reopen it', () => {
+  const storage = new MemStore();
+  const data = initialData();
+  data.skus = data.skus.map(sku => ({ ...sku, onHand: 7, avgDailyDemand: 1, recentSales: Array(7).fill(1) }));
+  const beforeTasks = lowCoverSuggestions(data).map(task => task.sku.id);
+  const id = beforeTasks[0];
+  const withDraft = roundTrip(storage, setDraft(data, buildDraft(data, id, 30)));
+  buildGmailComposeUrl(withDraft.draft!);
+  assert.deepEqual(lowCoverSuggestions(withDraft).map(task => task.sku.id), beforeTasks);
+  assert.deepEqual(lowCoverSuggestions(setDraft(withDraft, undefined)).map(task => task.sku.id), beforeTasks);
+  assert.throws(() => sendDraft(withDraft, { ...withDraft.draft!, to: 'invalid' }), /recipient/);
+  assert.deepEqual(lowCoverSuggestions(withDraft).map(task => task.sku.id), beforeTasks);
+
+  const sent = sendDraft(withDraft, withDraft.draft!).data;
+  assert.deepEqual(sent.skus, data.skus, 'sending must not change on-hand stock or demand');
+  assert.deepEqual(sent.rejectedSuggestions, [], 'completion is not rejection');
+  const loaded = loadProvidedWorkspace(roundTrip(storage, sent), provided);
+  assert.deepEqual(lowCoverSuggestions(loaded).map(task => task.sku.id), beforeTasks.filter(itemId => itemId !== id));
+  assert.ok(!suggestions(loaded).some(task => task.sku.id === id));
+  assert.equal(loaded.orders.length, 1);
+
+  for (const status of ['Pending Delivery', 'Received'] as const) {
+    const updated = setOrderStatus(loaded, loaded.orders[0].id, status);
+    assert.ok(!lowCoverSuggestions(updated).some(task => task.sku.id === id));
+  }
+  const preview = previewImport(loaded, [{ itemId: id, date: '2026-10-20', quantity: 1 }]);
+  const imported = loadProvidedWorkspace(roundTrip(storage, applyImport(loaded, preview, 'Tester')), provided);
+  assert.ok(lowCoverSuggestions(imported).some(task => task.sku.id === id));
+  assert.equal(imported.orders.length, 1, 'new sales must preserve order history');
+  assert.deepEqual(providedWorkspace(provided).completedSuggestions, []);
+});
+
+test('previously recorded orders hide completed suggestions in older saved workspaces', () => {
+  const data = initialData();
+  const task = lowCoverSuggestions(data)[0];
+  assert.ok(task);
+  const draft = buildDraft(data, task.sku.id, task.quantity);
+  const legacy = sendDraft(setDraft(data, draft), draft).data;
+  delete legacy.completedSuggestions;
+  const loaded = loadProvidedWorkspace(roundTrip(new MemStore(), legacy), provided);
+  assert.ok(!lowCoverSuggestions(loaded).some(row => row.sku.id === task.sku.id));
+  assert.equal(loaded.orders.length, 1);
+  assert.deepEqual(loaded.completedSuggestions, [task.sku.id]);
 });
 
 test('draft persists, send creates exactly one Sent order and blocks duplicates', () => {

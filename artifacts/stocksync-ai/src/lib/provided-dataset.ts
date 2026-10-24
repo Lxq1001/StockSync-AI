@@ -1,5 +1,5 @@
 import type { StockDataset } from '@workspace/api-client-react';
-import { initialData, RETIRED_STORE_KEYS, saveStore, validV2, type StoreData } from './procurement';
+import { completedSuggestionIds, initialData, RETIRED_STORE_KEYS, saveStore, validV2, type StoreData } from './procurement';
 import { averageDailyUse, parseSalesFile, previewImport } from './sales-import';
 
 export type ProvidedDataset = StockDataset;
@@ -85,6 +85,7 @@ export function loadProvidedWorkspace(current: StoreData, bundle: ProvidedDatase
     draft: current.draft && linked(current.draft) ? current.draft : undefined,
     audit: current.audit.filter(a => a.orderId ? orderIds.has(a.orderId) : !containsOldData),
     rejectedSuggestions: current.rejectedSuggestions.filter(id => itemIds.has(id)),
+    completedSuggestions: completedSuggestionIds({ ...current, orders }).filter(id => itemIds.has(id)),
     lastImport: hasHistory ? current.lastImport ?? next.lastImport : next.lastImport,
     salesTransactions: hasHistory ? history : next.salesTransactions,
   }, bundle);

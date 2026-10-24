@@ -29,6 +29,7 @@ export type StoreData = {
   demoSuggestionsSeeded?: boolean;
   skus: SKU[]; suppliers: Supplier[]; orders: PurchaseOrder[]; audit: AuditEntry[];
   budgetCap: number; rejectedSuggestions: string[]; legacyOrders: LegacyOrder[];
+  completedSuggestions?: string[];
   salesTransactions?: import('./sales-import').SalesRow[];
   draft?: TemplateDraft; lastImport?: { importedAt: string; rows: number; windowStart: string; windowEnd: string };
 };
@@ -49,7 +50,7 @@ const uid = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.ra
 export const initialData = (): StoreData => ({
   version: 2,
   skus: [], suppliers: [], orders: [], audit: [],
-  budgetCap: 500, rejectedSuggestions: [], legacyOrders: [], salesTransactions: [],
+  budgetCap: 500, rejectedSuggestions: [], completedSuggestions: [], legacyOrders: [], salesTransactions: [],
 });
 
 /** Days of stock at current average use. Zero demand means no depletion risk. */
@@ -65,10 +66,13 @@ export function suggestedQuantity(sku: SKU): number {
   return sku.onHand <= REORDER_ON_HAND_THRESHOLD ? sku.avgDailyDemand * REORDER_DAYS : 0;
 }
 export type Suggestion = { sku: SKU; quantity: number; totalCost: number; cover: number };
+/** Older workspaces predate completion tracking; their recorded orders count as completed tasks. */
+export const completedSuggestionIds = (data: StoreData): string[] =>
+  data.completedSuggestions ?? Array.from(new Set(data.orders.map(order => order.itemId)));
 /** Low on-hand stock with positive recent demand, excluding dismissed suggestions. */
 export function suggestions(data: StoreData): Suggestion[] {
   return data.skus
-    .filter(s => suggestedQuantity(s) > 0 && !data.rejectedSuggestions.includes(s.id))
+    .filter(s => suggestedQuantity(s) > 0 && !data.rejectedSuggestions.includes(s.id) && !completedSuggestionIds(data).includes(s.id))
     .map(sku => { const quantity = suggestedQuantity(sku); return { sku, quantity, totalCost: round2(quantity * sku.unitCost), cover: estimatedCover(sku) }; })
     .sort((a, b) => a.cover - b.cover);
 }
@@ -77,7 +81,7 @@ const lowCoverSuggestionQuantity = (sku: SKU) => sku.avgDailyDemand * REORDER_DA
 /** Shared AI tasks for Inventory and Overview, based on estimated cover. */
 export function lowCoverSuggestions(data: StoreData): Suggestion[] {
   return data.skus
-    .filter(s => isLowCover(s) && s.avgDailyDemand > 0 && !data.rejectedSuggestions.includes(s.id))
+    .filter(s => isLowCover(s) && s.avgDailyDemand > 0 && !data.rejectedSuggestions.includes(s.id) && !completedSuggestionIds(data).includes(s.id))
     .map(sku => { const quantity = lowCoverSuggestionQuantity(sku); return { sku, quantity, totalCost: round2(quantity * sku.unitCost), cover: estimatedCover(sku) }; })
     .sort((a, b) => a.cover - b.cover);
 }
@@ -180,7 +184,7 @@ export function sendDraft(data: StoreData, edited: Pick<TemplateDraft, 'to' | 'f
     order,
     data: {
       ...data, draft: undefined, orders: [order, ...data.orders],
-      rejectedSuggestions: data.rejectedSuggestions,
+      completedSuggestions: Array.from(new Set([...completedSuggestionIds(data), draft.itemId])),
       audit: [log(receipt ? 'Email sent via Gmail' : 'Email marked as sent', `${id} · ${draft.quantity} ${sku.unit} ${sku.name} · ${formatMoney(order.totalCost)} · to ${order.send!.to} · ${receipt ? `Gmail accepted message ${receipt.messageId}; delivery not verified` : 'user confirmed sent from external mail app'} · status Sent`, id), ...data.audit],
     },
   };
@@ -209,6 +213,7 @@ export function validV2(raw: unknown): raw is StoreData {
   if (!isObj(raw) || raw.version !== 2) return false;
   const r = raw as Record<string, unknown>;
   return (r.startingStockRandomized === undefined || typeof r.startingStockRandomized === 'boolean')
+    && (r.completedSuggestions === undefined || (Array.isArray(r.completedSuggestions) && r.completedSuggestions.every(str)))
     && (r.demoSuggestionsSeeded === undefined || typeof r.demoSuggestionsSeeded === 'boolean')
     && Array.isArray(r.skus) && r.skus.every(validSku) && Array.isArray(r.suppliers) && r.suppliers.every(validSupplier)
     && Array.isArray(r.orders) && r.orders.every(o => validOrderBase(o) && (ORDER_STATUSES as readonly string[]).includes(o.status))
