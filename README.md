@@ -260,10 +260,10 @@ RunPod is not currently used by StockSync AI. The project has no RunPod endpoint
 
 ## Future Improvements
 
-- [] **Improve Data Accuracy:** Ensure inventory and sales data are accurate, complete and up to date to generate more reliable restocking recommendations.
-- [] **Adapt to Demand and Supply Changes:** Improve the system’s ability to account for unexpected changes in customer demand, supplier delays and stock availability.
-- [] **Automate Supplier Communication Tracking:** Integrate email monitoring to detect supplier replies and negotiation outcomes, enabling purchase order statuses to be updated automatically where appropriate.
-- [] **Strengthen End-to-End Automation:** Further streamline the restocking and supplier ordering process while maintaining human review and approval where necessary.
+- [ ] **Improve Data Accuracy:** Ensure inventory and sales data are accurate, complete and up to date to generate more reliable restocking recommendations.
+- [ ] **Adapt to Demand and Supply Changes:** Improve the system’s ability to account for unexpected changes in customer demand, supplier delays and stock availability.
+- [ ] **Automate Supplier Communication Tracking:** Integrate email monitoring to detect supplier replies and negotiation outcomes, enabling purchase order statuses to be updated automatically where appropriate.
+- [ ] **Strengthen End-to-End Automation:** Further streamline the restocking and supplier ordering process while maintaining human review and approval where necessary.
 
 ## Team
 
