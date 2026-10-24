@@ -15,15 +15,13 @@ A browser-local procurement demo for reviewing stock risk, opening prefilled sup
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - No secrets or database connection are needed for the current browser-local demo.
 - The API is required to load the supplied datasets. It exposes `/api/healthz`, `/api/stock-dataset`, and optional legacy email routes. The canvas workflow is not needed to run the app and is left stopped.
-- `DATABASE_URL` is required only if using the separate `@workspace/db` package; no database has been provisioned or migrated as part of setup.
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
 - Frontend: React, Vite, TypeScript, Tailwind CSS
 - Optional API: Express 5
-- Optional DB package: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
+- Validation: Zod (`zod/v4`)
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
 
@@ -31,7 +29,7 @@ A browser-local procurement demo for reviewing stock risk, opening prefilled sup
 
 - `artifacts/stocksync-ai/src/` — existing frontend, pages, components, and browser-local procurement logic
 - `artifacts/api-server/` — Express dataset, health, and optional legacy email API
-- `lib/` — shared API and database workspace packages
+- `lib/` — shared API workspace packages
 
 ## Architecture decisions
 
